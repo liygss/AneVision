@@ -34,6 +34,14 @@ app.add_middleware(
 
 app.include_router(router)
 
+# Vercel Services routes by rewriting "/api/*" to this service while the service
+# still observes the ORIGINAL path ("The service receives the original request
+# path"), so /api/health arrives here as /api/health, not /health. The frontend
+# calls "/api", so the same router is mounted twice: once at the root for direct
+# access (uvicorn, curl, health checks) and once under /api for the Vercel
+# rewrite. Both spellings work either way.
+app.include_router(router, prefix="/api")
+
 
 if __name__ == "__main__":
     import uvicorn

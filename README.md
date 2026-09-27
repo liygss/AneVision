@@ -100,6 +100,25 @@ Routing: `/api/*` dilepas ke service `backend`, sisanya dilayani `frontend`
 sebagai SPA. Karena rewrite di root memakai path `/api`, frontend dan backend
 berpindah domain **tidak** perlu konfigurasi CORS tambahan.
 
+### Prefix `/api` tidak dilepas
+
+Vercel Services meneruskan **path asli** ke service, tidak memotong prefix:
+
+> The service receives the original request path. `GET /api/users` reaches
+> `my_backend` as `/api/users`, not `/users`.
+
+Jadi `GET /api/health` sampai di FastAPI sebagai `/api/health`, bukan `/health`.
+Karena itu router dipasang dua kali di `backend/main.py`:
+
+```python
+app.include_router(router)                 # /health, /predict
+app.include_router(router, prefix="/api")   # /api/health, /api/predict
+```
+
+Tanpa baris kedua, backend akan menjawab `404 Not Found` untuk panggilan
+frontend. Memasang dua kali membuat kedua penulisan valid, sehingga backend juga
+tetap bisa diuji langsung lewat `uvicorn` atau `curl` tanpa lewat proxy.
+
 ### Bagian yang wajib diisi: `entrypoint`
 
 Dalam mode services, Vercel **tidak** lagi menebak file aplikasi Python. obliga

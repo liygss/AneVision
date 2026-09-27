@@ -62,6 +62,17 @@ export async function analyzeImages(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
+
+    // A 404 on the API path means the route does not exist on the host, which
+    // is a routing problem (missing rewrite or a backend that serves a
+    // different prefix), not a failed prediction. Reporting FastAPI's bare
+    // "Not Found" to the user is useless, so it becomes a connectivity error.
+    if (response.status === 404) {
+      throw new BackendUnreachableError(
+        `Endpoint ${API_BASE}/predict tidak ditemukan di host ini.`
+      );
+    }
+
     throw new Error(errorData?.detail || "Prediksi gagal. Silakan coba lagi.");
   }
 
