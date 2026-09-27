@@ -1,0 +1,13 @@
+# Optional: installs the MobileNetV2 status validator for local development.
+#
+# Only the validator needs it. The Hb number comes from Ridge Regression, and
+# the validator is explicitly optional in the code
+# (models/Deploy_AnemiaEyes/deploy/inference.py:82-84 sets cnn_ok = False when
+# TensorFlow is missing, and the Results page labels it "Referensi" rather than
+# the deciding result).
+#
+# NOT installed on Vercel: 1.1 GB exceeds the function size limit on every
+# Vercel plan.
+#
+# Usage:
+#   ./.venv/bin/pip install -r requirements-eyeml.txt

@@ -6,13 +6,17 @@ Skrining awal risiko anemia melalui analisis citra mata (konjungtiva) dan kuku, 
 
 ## Cara menjalankan
 
-Butuh dua virtualenv Python karena ada konflik versi protobuf: TensorFlow (model mata) butuh protobuf ≥ 6, sedangkan mediapipe (deteksi kuku) butuh protobuf 4. Keduanya tidak bisa hidup di satu proses, jadi inferensi kuku jalan di subprocess terpisah.
+Butuh dua virtualenv Python karena ada konflik versi protobuf: TensorFlow (validator CNN) butuh protobuf ≥ 6, sedangkan mediapipe (deteksi kuku) butuh protobuf 4. Keduanya tidak bisa hidup di satu proses, jadi inferensi kuku jalan di subprocess terpisah.
 
 ```bash
-# Backend (venv utama: TensorFlow + scikit-learn)
+# Backend (venv utama)
 cd backend
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements.txt
+
+# Opsional: validator MobileNetV2 butuh TensorFlow (1.1 GB). Angka Hb tetap
+# sama persis tanpanya, hanya validator kedua yang tidak ada.
+./.venv/bin/pip install -r requirements-eyeml.txt
 
 # Backend (venv kuku: ultralytics/PyTorch + mediapipe + onnxruntime)
 python3 -m venv .venv_nail
@@ -21,6 +25,8 @@ python3 -m venv .venv_nail
 # Frontend
 cd ../frontend && npm install
 ```
+
+Tanpa `requirements-eyeml.txt` dan `requirements_nail.txt`, backend tetap jalan dan menampilkan estimasi Hb dari model mata saja. Yang hilang adalah validator kedua dan deteksi kuku.
 
 Kemudian jalankan keduanya:
 
@@ -103,28 +109,42 @@ Vercel membatasi ukuran satu serverless function di **250 MB (Hobby) / 1000 MB (
 | numpy + sklearn + Pillow + joblib | 76 MB | Wajib |
 | **Total jalur mata saja** | **≈ 276 MB** | Butuh paket **Pro** |
 
-Karena itu backend punya dua daftar dependency:
+Karena itu backend tidak punya daftar dependency khusus Vercel. `backend/requirements.txt` sudah merupakan daftar yang aman untuk Vercel, jadi deploy manual tidak perlu menukar file apa pun:
 
-- `backend/requirements.txt` — pengembangan lokal, memuat TensorFlow untuk validator MobileNetV2.
-- `backend/requirements-vercel.txt` — untuk deploy, tanpa TensorFlow.
+| File | Isi | Dipakai |
+|---|---|---|
+| `backend/requirements.txt` | numpy, opencv, scikit-learn, FastAPI | Vercel **dan** lokal |
+| `backend/requirements-eyeml.txt` | `tensorflow` saja | opsional, hanya lokal |
+| `backend/requirements_nail.txt` | ultralytics, mediapipe, onnxruntime | lokal saja, venv terpisah |
 
-Untuk deploy backend ke Vercel, ganti `requirements.txt` dengan `requirements-vercel.txt`.
-
-Yang hilang saat TensorFlow dibuang adalah **validator status MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi `Ridge_only`. Kode sudah aman untuk itu di `models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
+Yang hilang saat TensorFlow tidak dipasang adalah **validator status MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi `Ridge_only`. Kode sudah aman untuk itu di `models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
 
 Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv terpisah dan serverless function tidak bisa membuat subprocess tersebut. `services/nail.py:28` sudah mendeteksi ketiadaan venv dan mengembalikan pesan bersih, jadi endpoint otomatis turun ke mode mata-saja, bukan crash.
 
+### Deploy manual lewat dashboard Vercel
+
+1. Buka <https://vercel.com/new> → **Add New → Project** → import repo `liygss/AneVision`.
+2. **Root Directory** biarkan kosong (repo root). Vercel membaca `vercel.json` dan
+   membuat sendiri service `frontend` dan `backend` dari sana.
+3. Framework Preset: **Other**. Biarkan Build Command, Output Directory, dan
+   Install Command kosong, semuanya sudah dideteksi dari `vercel.json`.
+4. Tambahkan environment variable di bawah, lalu Deploy.
+
+| Key | Service | Value | Keterangan |
+|---|---|---|---|
+| `MODEL_MODE` | backend | `real` | **Wajib.** Default-nya `mock`, membuat backend tidak memuat model dan `/predict` selalu menolak dengan "Eye model not loaded". |
+| `FRONTEND_URL` | backend | `https://<nama-proyek>.vercel.app` | Backend mengizinkan CORS hanya untuk nilai ini (`backend/main.py:27-33`). |
+| `VITE_API_BASE_URL` | frontend | *(kosongkan)* | Biarkan kosong agar frontend memakai rewrite `/api` yang sama-origin. |
+
+> Paket **Pro** dibutuhkan untuk service `backend` (function ~276 MB melewati cap
+> 250 MB di Hobby). Service `frontend` tetap gratis di paket mana pun.
+
 ### Kalau backend tidak di-deploy
 
-Halaman beranda, `/demo`, dan `/about` tetap berfungsi penuh. `/demo` berjalan sepenuhnya di browser tanpa memanggil API. Halaman `/screening` mendeteksi backend yang tidak ada dan menampilkan pemberitahuan alih-alih gagal diam-diam, karena static host seperti Vercel menjawab `/api/*` dengan `index.html` berstatus 200. Pemeriksaan konektivitas memverifikasi `content-type` sehingga kondisi tersebut tidak dianggap sebagai "server online".
-
-### Environment variable
-
-| Service | Variable | Nilai |
-|---|---|---|
-| backend | `MODEL_MODE` | `mock` (default, model tidak dimuat) |
-| backend | `FRONTEND_URL` | URL Vercel untuk CORS, mis. `https://anevision.vercel.app` |
-| frontend | `VITE_API_BASE_URL` | biarkan kosong untuk memakai rewrite `/api` yang sama-origin |
-
-CORS backend sudah accepting `FRONTEND_URL` (`backend/main.py:27-33`).
+Hapus service `backend` dari `vercel.json` sebelum deploy. Beranda, `/demo`, dan
+`/about` tetap utuh, dan `/demo` berjalan penuh di browser tanpa memanggil API.
+Halaman `/screening` mendeteksi backend yang tidak ada dan menampilkan
+pemberitahuan alih-alih gagal diam-diam, karena static host menjawab `/api/*`
+dengan `index.html` berstatus 200. Pemeriksaan konektivitas memverifikasi
+`content-type` sehingga kondisi itu tidak dianggap sebagai "server online".
 
