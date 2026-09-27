@@ -88,62 +88,71 @@ Bobot model runtime ikut di-commit agar backend bisa langsung jalan setelah clon
 
 ## Deployment
 
-Vercel menangani monorepo dengan **satu proyek per direktori**, bukan satu proyek
-untuk seluruh repo. Dua langkah, dua proyek Vercel:
+Vercel mendukung banyak service dalam satu proyek lewat blok `services` di
+`vercel.json`:
 
-| Proyek Vercel | Root Directory | Hasil |
+| Service | Root | Isi |
 |---|---|---|
-| `anevision-web` | `frontend` | situs statis (Vite) |
-| `anevision-api` | `backend` | FastAPI sebagai serverless function |
+| `frontend` | `frontend/` | Vite → static hosting |
+| `backend` | `backend/` | FastAPI sebagai serverless function |
 
-> Pendekatan `services` di dalam satu `vercel.json` tidak didukung dan membuat
-> build berhenti dengan:
-> `Service "backend" detected framework "fastapi" in "backend" and must specify
-> an "entrypoint" for runtime "python".`
-> Karena itu file tersebut sudah dihapus dari root.
+Routing: `/api/*` dilepas ke service `backend`, sisanya dilayani `frontend`
+sebagai SPA. Karena rewrite di root memakai path `/api`, frontend dan backend
+berpindah domain **tidak** perlu konfigurasi CORS tambahan.
 
-Keduanya dihubungkan lewat environment variable, bukan rewrite.
+### Bagian yang wajib diisi: `entrypoint`
 
-### 1. Deploy backend
+Dalam mode services, Vercel **tidak** lagi menebak file aplikasi Python. obliga
+ditulis eksplisit di dalam objek service:
+
+```json
+"backend": {
+  "root": "backend",
+  "framework": "fastapi",
+  "entrypoint": "main:app"
+}
+```
+
+Tanpa itu build berhenti dengan:
+
+```
+Service "backend" detected framework "fastapi" in "backend" and must specify
+an "entrypoint" for runtime "python".
+```
+
+`main:app` berarti cari objek `app` di `backend/main.py`. Nilai ini dibaca
+terhadap service root, dan bentuknya `module:attr`.
+
+> `[tool.vercel] entrypoint` di `pyproject.toml` **tidak berlaku** pada mode
+> services. Nilai itu hanya dibaca untuk proyek Python tunggal. Karena itu
+> `backend/pyproject.toml` tidak lagi dipakai di sini.
+
+### Syarat di dashboard Vercel
+
+Project hanya dibangun sebagai services bila **dua hal** ini benar:
+
+1. Framework preset proyek disetel ke **Services**.
+2. `vercel.json` di root memuat key `services`.
+
+Kalau salah satu tidak ada, Vercel memakai deteksi framework default dan
+mengabaikan konfigurasi services.
+
+### Langkah deploy
 
 1. <https://vercel.com/new> → **Add New → Project** → import `liygss/AneVision`.
-2. **Root Directory**: `backend`.
-3. **Framework Preset**: biarkan `Other`. `backend/vercel.json` sudah menetapkan
-   `fastapi` dan entrypoint `main.py` (nama ini termasuk lokasi yang didukung
-   Vercel), ditambah `includeFiles` supaya bobot model ikut ter-bundle.
+2. **Root Directory**: biarkan kosong (repo root), karena kedua service ada di
+   dalam `vercel.json`.
+3. **Framework Preset**: **Services**.
 4. Environment variables:
 
-| Key | Value |
-|---|---|
-| `MODEL_MODE` | `real` |
-| `FRONTEND_URL` | Kosongkan dulu, diisi pada langkah 2 |
+| Key | Scope | Value | Keterangan |
+|---|---|---|---|
+| `MODEL_MODE` | backend | `real` | **Wajib.** Default-nya `mock` membuat backend tidak memuat model dan `/predict` selalu menolak dengan "Eye model not loaded". |
+| `VITE_API_BASE_URL` | frontend | *(kosongkan)* | Biarkan kosong agar frontend memakai rewrite `/api` yang sama-origin. |
 
-5. Deploy. Catat URL-nya, mis. `https://anevision-api.vercel.app`.
-6. Tes: `https://anevision-api.vercel.app/health` harus membalas
-   `{"status":"ok"}`.
-
-### 2. Deploy frontend
-
-1. **Add New → Project** → import repo yang sama.
-2. **Root Directory**: `frontend`.
-3. Environment variables:
-
-| Key | Value |
-|---|---|
-| `VITE_API_BASE_URL` | `https://anevision-api.vercel.app` |
-
-4. Deploy.
-
-### 3. Sambungkan CORS
-
-Kembali ke proyek **backend** → Settings → Environment Variables, isi:
-
-| Key | Value |
-|---|---|
-| `FRONTEND_URL` | `https://anevision-web.vercel.app` |
-
-Lalu redeploy backend. CORS hanya mengizinkan `FRONTEND_URL` dan
-`http://localhost:5173` (`backend/main.py:27-33`).
+5. Deploy. Cek `https://<proyek>.vercel.app/health` harus membalas
+   `{"status":"ok"}`, dan `https://<proyek>.vercel.app/` harus memuat landing
+   page.
 
 ### Batasan yang perlu diketahui
 
