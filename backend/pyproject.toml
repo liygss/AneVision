@@ -1,0 +1,17 @@
+# Vercel reads [tool.vercel] to locate the FastAPI application.
+#
+# Without this, Vercel detected the framework in backend/main.py but reported:
+#   "Detected framework \"fastapi\" in \"backend\" and must specify an
+#    \"entrypoint\" for runtime \"python\"."
+#
+# backend/main.py is a supported entrypoint name, but backend/api/index.py also
+# existed as a candidate, which left the detection ambiguous. That file has been
+# removed and the entrypoint is now stated explicitly here.
+#
+# The value tells Vercel to look for a FastAPI instance named `app` in ./main.py
+# relative to this file, i.e. backend/main.py.
+#
+# See https://vercel.com/docs/frameworks/backend/fastapi
+
+[tool.vercel]
+entrypoint = "main:app"

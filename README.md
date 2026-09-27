@@ -93,21 +93,21 @@ Repo ini dikonfigurasi untuk Vercel lewat `vercel.json` di root, memakai dua ser
 | Service | Root | Isi |
 |---|---|---|
 | `frontend` | `frontend/` | Vite → static hosting |
-| `backend` | `backend/` | FastAPI sebagai serverless function, entrypoint di `backend/api/index.py` |
+| `backend` | `backend/` | FastAPI sebagai serverless function, entrypoint `backend/main.py` (dinyatakan di `backend/pyproject.toml`) |
 
 Routing: `/api/*` dilepas ke service `backend`, sisanya dilayani `frontend` sebagai SPA.
 
 ### Batasan yang perlu diketahui sebelum deploy
 
-Vercel membatasi ukuran satu serverless function di **250 MB (Hobby) / 1000 MB (Pro)**. Setelah diukur:
+Aplikasi FastAPI di Vercel menjadi satu function dengan batas bundle **500 MB**. Setelah diukur, isi bundle yang akan terpaket:
 
 | Dependency | Ukuran terpasang | Dampak |
 |---|---|---|
-| `tensorflow` | **1.1 GB** | Melebihi bahkan batas Pro, harus dibuang |
+| `tensorflow` | **1.1 GB** | Melewati batas 500 MB, harus dibuang |
 | `opencv-python-headless` | 119 MB | Wajib untuk ekstraksi fitur Lab/HSV |
 | `scipy` (ikut `scikit-learn`) | 81 MB | Wajib |
-| numpy + sklearn + Pillow + joblib | 76 MB | Wajib |
-| **Total jalur mata saja** | **≈ 276 MB** | Butuh paket **Pro** |
+| numpy + sklearn + Pillow + joblib + FastAPI | ~100 MB | Wajib |
+| **Total jalur mata saja** | **≈ 300 MB** | **Muat di bawah batas 500 MB** |
 
 Karena itu backend tidak punya daftar dependency khusus Vercel. `backend/requirements.txt` sudah merupakan daftar yang aman untuk Vercel, jadi deploy manual tidak perlu menukar file apa pun:
 
@@ -120,6 +120,18 @@ Karena itu backend tidak punya daftar dependency khusus Vercel. `backend/require
 Yang hilang saat TensorFlow tidak dipasang adalah **validator status MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi `Ridge_only`. Kode sudah aman untuk itu di `models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
 
 Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv terpisah dan serverless function tidak bisa membuat subprocess tersebut. `services/nail.py:28` sudah mendeteksi ketiadaan venv dan mengembalikan pesan bersih, jadi endpoint otomatis turun ke mode mata-saja, bukan crash.
+
+### Entry point
+
+Vercel mencari instance `FastAPI` bernama `app` di `app.py`, `index.py`, `server.py`, `main.py`, `wsgi.py`, atau `asgi.py` pada root service, dan di `src/` atau `app/`. Aplikasi ini berada di `backend/main.py`. Supaya tidak ambigu, entrypoint-nya dinyatakan eksplisit di `backend/pyproject.toml`:
+
+```toml
+[tool.vercel]
+entrypoint = "main:app"
+```
+
+Tanpa itu Vercel berhenti dengan:
+`Detected framework "fastapi" in "backend" and must specify an "entrypoint" for runtime "python".`
 
 ### Deploy manual lewat dashboard Vercel
 
@@ -136,8 +148,8 @@ Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv ter
 | `FRONTEND_URL` | backend | `https://<nama-proyek>.vercel.app` | Backend mengizinkan CORS hanya untuk nilai ini (`backend/main.py:27-33`). |
 | `VITE_API_BASE_URL` | frontend | *(kosongkan)* | Biarkan kosong agar frontend memakai rewrite `/api` yang sama-origin. |
 
-> Paket **Pro** dibutuhkan untuk service `backend` (function ~276 MB melewati cap
-> 250 MB di Hobby). Service `frontend` tetap gratis di paket mana pun.
+> Service `backend` memakai Fluid compute dan bundle-nya sekitar 300 MB, masih di
+> bawah batas 500 MB, jadi tidak memerlukan paket Pro.
 
 ### Kalau backend tidak di-deploy
 
