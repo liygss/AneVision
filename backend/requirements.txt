@@ -9,18 +9,9 @@ opencv-python-headless
 scikit-learn
 scikit-image
 joblib
-
-# NOTE: TensorFlow is intentionally NOT listed here.
-#
-# It is only needed for the optional MobileNetV2 status validator, and it
-# installs at 1.1 GB, which exceeds the Vercel serverless function limit on
-# every plan (250 MB Hobby / 1000 MB Pro). Keeping it out of this file is what
-# makes `vercel deploy` work without any manual step.
-#
-# The Hb estimate itself is produced by Ridge Regression (scikit-learn) and was
-# verified to be identical with and without TensorFlow: hgb_predicted 13.72
-# either way, only the reported `source` differs (Ridge_only vs
-# ensemble_Ridge+MobileNetV2). See README.
-#
-# To get the validator back for local work:  pip install -r requirements-eyeml.txt
-# The nail model needs a separate virtualenv, see requirements_nail.txt.
+tensorflow
+# NOTE: the nail model runs in a SEPARATE virtualenv (.venv_nail) because
+# mediapipe 0.10.x needs protobuf 4.x while TensorFlow needs protobuf >= 6.31.1.
+# See requirements_nail.txt. Both venvs are created by start.sh; on Vercel the
+# Python runtime is a single process, so the nail path is imported in-process
+# there instead (see services/nail.py).

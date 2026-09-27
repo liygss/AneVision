@@ -11,6 +11,14 @@ export interface NailBoxCoords {
 
 export type BackendState = "checking" | "online" | "offline";
 
+/**
+ * A cold start on a serverless host has to load every model, which can take
+ * 30-60s. Without a timeout the fetch hangs and the Screening page looks
+ * frozen, so probes are bounded and reported as "starting".
+ */
+export const HEALTH_PROBE_TIMEOUT_MS = 8000;
+const PREDICT_TIMEOUT_MS = 120_000;
+
 /** Thrown when the API host cannot be reached at all (DNS, CORS, no route). */
 export class BackendUnreachableError extends Error {
   constructor(message = "Server analisis tidak dapat dihubungi.") {
@@ -55,8 +63,14 @@ export async function analyzeImages(
     response = await fetch(`${API_BASE}/predict`, {
       method: "POST",
       body: formData,
+      signal: AbortSignal.timeout(PREDICT_TIMEOUT_MS),
     });
-  } catch {
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new BackendUnreachableError(
+        "Server terlalu lama menjawab. Model mungkin sedang dimuat, coba lagi sebentar lagi."
+      );
+    }
     throw new BackendUnreachableError();
   }
 
@@ -90,6 +104,7 @@ export async function checkHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/health`, {
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
     });
     if (!response.ok) return false;
     if (!looksLikeJson(response)) return false;

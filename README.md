@@ -156,56 +156,62 @@ Project hanya dibangun sebagai services bila **dua hal** ini benar:
 Kalau salah satu tidak ada, Vercel memakai deteksi framework default dan
 mengabaikan konfigurasi services.
 
-### Langkah deploy
-
-1. <https://vercel.com/new> → **Add New → Project** → import `liygss/AneVision`.
-2. **Root Directory**: biarkan kosong (repo root), karena kedua service ada di
-   dalam `vercel.json`.
-3. **Framework Preset**: **Services**.
-4. Environment variables:
+### Environment variable
 
 | Key | Scope | Value | Keterangan |
 |---|---|---|---|
+| `VERCEL_SUPPORT_LARGE_FUNCTIONS` | project | `1` | **Wajib.** Menaikkan batas bundle function dari 500 MB ke 5 GB. Tanpa ini, dependensi model kuku (torch + ultralytics + mediapipe) tidak muat dan build gagal. |
 | `MODEL_MODE` | backend | `real` | **Wajib.** Default-nya `mock` membuat backend tidak memuat model dan `/predict` selalu menolak dengan "Eye model not loaded". |
 | `VITE_API_BASE_URL` | frontend | *(kosongkan)* | Biarkan kosong agar frontend memakai rewrite `/api` yang sama-origin. |
 
-5. Deploy. Cek `https://<proyek>.vercel.app/health` harus membalas
-   `{"status":"ok"}`, dan `https://<proyek>.vercel.app/` harus memuat landing
-   page.
+### Langkah deploy
+
+1. <https://vercel.com/new> → **Add New → Project** → import `liygss/AneVision`.
+2. **Root Directory**: biarkan kosong (repo root), karena kedua service ada di dalam `vercel.json`.
+3. **Framework Preset**: **Services**.
+4. Tambahkan ketiga environment variable di atas.
+5. Deploy. Cek `https://<proyek>.vercel.app/api/health` harus membalas `{"status":"ok"}`, dan `https://<proyek>.vercel.app/` harus memuat landing page.
 
 ### Batasan yang perlu diketahui
 
-Aplikasi FastAPI di Vercel menjadi satu function dengan batas bundle **500 MB**.
-Isi bundle yang terpaket:
+Aplikasi FastAPI di Vercel menjadi satu function. Batas bundle standarnya
+500 MB, dan **Large Functions** (beta) menaikkan itu menjadi 5 GB. Paket Hobby
+menyediakan RAM 2 GB, yang cukup untuk kedua model sekaligus karena keduanya
+berjalan pada dua proses terpisah.
 
-| Dependency | Ukuran terpasang | Dampak |
+Kebutuhan memori terukur di mesin lokal:
+
+| Jalur | Isi | Peak RSS |
 |---|---|---|
-| `tensorflow` | **1.1 GB** | Melewati batas 500 MB, harus dibuang |
-| `opencv-python-headless` | 119 MB | Wajib untuk ekstraksi fitur Lab/HSV |
-| `scipy` (ikut `scikit-learn`) | 81 MB | Wajib |
-| numpy + sklearn + Pillow + joblib + FastAPI | ~100 MB | Wajib |
-| **Total jalur mata saja** | **≈ 300 MB** | **Muat di bawah batas 500 MB** |
+| Mata | numpy, opencv, scikit-learn, TensorFlow, MobileNetV2 | **548 MB** |
+| Kuku | torch, mediapipe, ultralytics, YOLO26-seg | **466 MB** |
+| | **Total dua proses** | **≈ 1,0 GB** dari 2 GB |
 
-Karena itu `backend/requirements.txt` sudah merupakan daftar yang aman untuk
-Vercel dan tidak perlu ditukar saat deploy:
+Karena itu `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` wajib dipasang, dan `maxDuration`
+diatur 300 detik (`services/nail.py` sendiri menunggu 90 detik untuk worker).
 
-| File | Isi | Dipakai |
-|---|---|---|
-| `backend/requirements.txt` | numpy, opencv, scikit-learn, FastAPI | Vercel **dan** lokal |
-| `backend/requirements-eyeml.txt` | `tensorflow` saja | opsional, hanya lokal |
-| `backend/requirements_nail.txt` | ultralytics, mediapipe, onnxruntime | lokal saja, venv terpisah |
+### Dua virtualenv, dan bagaimana Vercel menanganinya
 
-Yang hilang saat TensorFlow tidak dipasang adalah **validator status
-MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan
-keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa
-TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi
-`Ridge_only`. Kode sudah aman untuk itu di
-`models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
+Secara lokal, kuku memakai virtualenv kedua (`.venv_nail`) karena ada konflik
+protobuf: mediapipe 0.10.x butuh protobuf 4.x, sedangkan TensorFlow butuh
+protobuf ≥ 6.31.1. Keduanya tidak bisa hidup di satu proses, jadi inferensi kuku
+dijalankan sebagai subprocess.
 
-Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv
-terpisah dan serverless function tidak bisa membuat subprocess tersebut.
-`services/nail.py:28` sudah mendeteksi ketiadaan venv dan mengembalikan pesan
-bersih, jadi endpoint otomatis turun ke mode mata-saja, bukan crash.
+Serverless seperti Vercel hanya menyediakan satu interpreter, jadi
+`.venv_nail` tidak ada. `services/nail.py` mendeteksinya dan mengimpor worker
+langsung ke dalam proses berjalan sebagai gantinya. Jalur kuku tetap berfungsi,
+dan lock `threading.Lock` tetap berlaku di kedua jalur.
+
+### Batas yang tidak hilang
+
+- Jalur kuku butuh RAM ~2 GB kalau dua model dimuat dalam **satu** proses.
+  Di Vercel keduanya terpisah, jadi aman; di host dengan RAM kecil, model
+  kuku akan gagal dimuat dan endpoint otomatis turun ke mode mata-saja
+  (`services/nail.py` mengembalikan pesan bersih, bukan crash).
+- Bobot model yang dipakai runtime terdaftar di
+  [`backend/models/RUNTIME_MODELS.md`](backend/models/RUNTIME_MODELS.md)
+  beserta checksum-nya. Dataset training dan checkpoint riset sengaja tidak
+  disertakan.
 
 ### Kalau backend tidak di-deploy
 

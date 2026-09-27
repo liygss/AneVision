@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ServerCrash, RefreshCw } from "lucide-react";
+import { ServerCrash, RefreshCw, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { BackendState } from "@/hooks/useBackendStatus";
 
@@ -25,11 +25,12 @@ export default function BackendNotice({ state, retry }: BackendNoticeProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-amber-800">
-                Server analisis belum terhubung
+                Server analisis belum merespons
               </p>
               <p className="text-sm text-amber-700 mt-1 leading-relaxed">
-                Model AI berjalan di server terpisah, bukan di peramban. Halaman ini
-                membutuhkan server tersebut agar bisa menganalisis foto Anda.
+                Model AI berjalan di server terpisah, bukan di peramban. Pemeriksaan
+                otomatis sudah dilakukan selama sekitar dua menit dan server tetap
+                tidak menjawab, jadi penyebabnya kemungkinan bukan sekadar cold start.
               </p>
               <p className="text-sm text-amber-700 mt-2 leading-relaxed">
                 Sementara itu,{" "}
@@ -50,6 +51,22 @@ export default function BackendNotice({ state, retry }: BackendNoticeProps) {
               </button>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {state === "checking" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-primary-50/70 border border-primary-100 rounded-2xl p-4 mb-6 flex items-center gap-3"
+        >
+          <Loader2 className="w-4 h-4 text-primary-600 animate-spin flex-shrink-0" />
+          <p className="text-sm text-primary-800">
+            Menghubungi server analisis untuk pertama kali bisa memakan waktu
+            satu menit, karena model dimuat saat permintaan pertama masuk.
+          </p>
         </motion.div>
       )}
     </AnimatePresence>
