@@ -1,0 +1,11 @@
+# Nail model subprocess venv (.venv_nail)
+# This separate env is REQUIRED: mediapipe 0.10.x needs protobuf 4.x, while
+# the main venv needs protobuf >=6.31.1 for TensorFlow (eye CNN). They are
+# incompatible in a single process, so nail inference runs in a subprocess.
+mediapipe==0.10.21
+scikit-learn
+joblib
+# GitHub canonical runtime: YOLO26-seg nail masking (seg26)
+ultralytics
+# AINailSys post-hoc adjustment (backend/models/AINailSys ONNX)
+onnxruntime

@@ -1,0 +1,71 @@
+# ============ Python ============
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Virtual environments (3.7 GB total, tidak pernah di-commit)
+backend/.venv/
+backend/.venv_nail/
+.venv/
+.venv_nail/
+venv/
+
+# Log & crash dump
+*.log
+backend/nail_worker_crash.log
+
+# ============ Node / Frontend ============
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Env (isi .env hanya variabel publik VITE_*, tapi tetap dikecualikan)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ============ Dataset training (bukan runtime) ============
+# 40.298 gambar (~800 MB) hanya dipakai untuk training/evaluasi, tidak pernah
+# diakses saat inferensi. Satu-satunya referensi .jpg di kode runtime adalah
+# ALLOWED_EXTENSIONS di backend/config/settings.py:18 (validasi file upload user).
+# Aset frontend tetap ikut karena dipakai aplikasi.
+backend/models/Kuku-Anemia/Data Tambahan/
+backend/models/Kuku-Anemia/data/
+backend/models/**/experiments/**/dataset/
+backend/models/**/experiments/**/outputs/
+backend/models/**/experiments/**/*.csv
+backend/models/**/experiments/**/*.cache
+
+# ============ Bobot model: eksperimen (bukan runtime) ============
+# Checkpoint riset yang tidak dipakai inferensi. Ukurannya ~172 MB.
+backend/models/**/experiments/**/*.pt
+backend/models/**/experiments/**/*.pth
+backend/models/**/runs/**/*.pt
+backend/models/**/runs/**/*.pth
+
+# AINailSys ONNX: opsional (post-hoc adjustment, dijaga try/except di
+# services/nail_worker.py:83-94). Total ~86 MB.
+backend/models/AINailSys/models/deployment/*.onnx
+backend/models/AINailSys/models/deployment/*.onnx.data
+
+# Bobot runtime tetap ikut commit agar backend bisa jalan setelah clone:
+#   backend/models/Kuku-Anemia/yolo26n-seg.pt
+#   backend/models/Kuku-Anemia/core/models/seg_runtime/elasticnet_model.joblib
+#   backend/models/Deploy_AnemiaEyes/deploy/outputs/models/*.joblib
+
+# ============ OS / Editor ============
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

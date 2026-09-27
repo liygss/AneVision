@@ -1,0 +1,16 @@
+*.pth
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.pyc
+data/
+__pycache__/
+venv/
+outputs/
+desktop.ini
+raspberry_pi/database/patient_records.csv
+
+AINailsys-Final-Manuscript.pdf
+publish/
+*.tex

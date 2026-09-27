@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+numpy
+pydantic
+pydantic-settings
+opencv-python-headless
+scikit-learn
+scikit-image
+joblib
+tensorflow
+# NOTE: nail model runs in a SEPARATE subprocess venv (.venv_nail) — see requirements_nail.txt
