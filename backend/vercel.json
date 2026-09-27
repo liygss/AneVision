@@ -1,0 +1,15 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": "fastapi",
+    "functions": {
+        "main.py": {
+            "maxDuration": 60,
+            "includeFiles": [
+                "models/Deploy_AnemiaEyes/deploy/outputs/models/**",
+                "models/Deploy_AnemiaEyes/deploy/feature_extraction.py",
+                "models/Kuku-Anemia/core/assets/hand_landmarker.task",
+                "models/Kuku-Anemia/core/models/seg_runtime/**"
+            ]
+        }
+    }
+}

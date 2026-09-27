@@ -88,18 +88,67 @@ Bobot model runtime ikut di-commit agar backend bisa langsung jalan setelah clon
 
 ## Deployment
 
-Repo ini dikonfigurasi untuk Vercel lewat `vercel.json` di root, memakai dua service dalam satu proyek:
+Vercel menangani monorepo dengan **satu proyek per direktori**, bukan satu proyek
+untuk seluruh repo. Dua langkah, dua proyek Vercel:
 
-| Service | Root | Isi |
+| Proyek Vercel | Root Directory | Hasil |
 |---|---|---|
-| `frontend` | `frontend/` | Vite → static hosting |
-| `backend` | `backend/` | FastAPI sebagai serverless function, entrypoint `backend/main.py` (dinyatakan di `backend/pyproject.toml`) |
+| `anevision-web` | `frontend` | situs statis (Vite) |
+| `anevision-api` | `backend` | FastAPI sebagai serverless function |
 
-Routing: `/api/*` dilepas ke service `backend`, sisanya dilayani `frontend` sebagai SPA.
+> Pendekatan `services` di dalam satu `vercel.json` tidak didukung dan membuat
+> build berhenti dengan:
+> `Service "backend" detected framework "fastapi" in "backend" and must specify
+> an "entrypoint" for runtime "python".`
+> Karena itu file tersebut sudah dihapus dari root.
 
-### Batasan yang perlu diketahui sebelum deploy
+Keduanya dihubungkan lewat environment variable, bukan rewrite.
 
-Aplikasi FastAPI di Vercel menjadi satu function dengan batas bundle **500 MB**. Setelah diukur, isi bundle yang akan terpaket:
+### 1. Deploy backend
+
+1. <https://vercel.com/new> → **Add New → Project** → import `liygss/AneVision`.
+2. **Root Directory**: `backend`.
+3. **Framework Preset**: biarkan `Other`. `backend/vercel.json` sudah menetapkan
+   `fastapi` dan entrypoint `main.py` (nama ini termasuk lokasi yang didukung
+   Vercel), ditambah `includeFiles` supaya bobot model ikut ter-bundle.
+4. Environment variables:
+
+| Key | Value |
+|---|---|
+| `MODEL_MODE` | `real` |
+| `FRONTEND_URL` | Kosongkan dulu, diisi pada langkah 2 |
+
+5. Deploy. Catat URL-nya, mis. `https://anevision-api.vercel.app`.
+6. Tes: `https://anevision-api.vercel.app/health` harus membalas
+   `{"status":"ok"}`.
+
+### 2. Deploy frontend
+
+1. **Add New → Project** → import repo yang sama.
+2. **Root Directory**: `frontend`.
+3. Environment variables:
+
+| Key | Value |
+|---|---|
+| `VITE_API_BASE_URL` | `https://anevision-api.vercel.app` |
+
+4. Deploy.
+
+### 3. Sambungkan CORS
+
+Kembali ke proyek **backend** → Settings → Environment Variables, isi:
+
+| Key | Value |
+|---|---|
+| `FRONTEND_URL` | `https://anevision-web.vercel.app` |
+
+Lalu redeploy backend. CORS hanya mengizinkan `FRONTEND_URL` dan
+`http://localhost:5173` (`backend/main.py:27-33`).
+
+### Batasan yang perlu diketahui
+
+Aplikasi FastAPI di Vercel menjadi satu function dengan batas bundle **500 MB**.
+Isi bundle yang terpaket:
 
 | Dependency | Ukuran terpasang | Dampak |
 |---|---|---|
@@ -109,7 +158,8 @@ Aplikasi FastAPI di Vercel menjadi satu function dengan batas bundle **500 MB**.
 | numpy + sklearn + Pillow + joblib + FastAPI | ~100 MB | Wajib |
 | **Total jalur mata saja** | **≈ 300 MB** | **Muat di bawah batas 500 MB** |
 
-Karena itu backend tidak punya daftar dependency khusus Vercel. `backend/requirements.txt` sudah merupakan daftar yang aman untuk Vercel, jadi deploy manual tidak perlu menukar file apa pun:
+Karena itu `backend/requirements.txt` sudah merupakan daftar yang aman untuk
+Vercel dan tidak perlu ditukar saat deploy:
 
 | File | Isi | Dipakai |
 |---|---|---|
@@ -117,46 +167,30 @@ Karena itu backend tidak punya daftar dependency khusus Vercel. `backend/require
 | `backend/requirements-eyeml.txt` | `tensorflow` saja | opsional, hanya lokal |
 | `backend/requirements_nail.txt` | ultralytics, mediapipe, onnxruntime | lokal saja, venv terpisah |
 
-Yang hilang saat TensorFlow tidak dipasang adalah **validator status MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi `Ridge_only`. Kode sudah aman untuk itu di `models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
+Yang hilang saat TensorFlow tidak dipasang adalah **validator status
+MobileNetV2**, bukan angkanya. Angka Hb tetap dihasilkan Ridge Regression, dan
+keduanya terbukti identik: `hgb_predicted 13.72` dengan maupun tanpa
+TensorFlow, hanya `source` berubah dari `ensemble_Ridge+MobileNetV2` menjadi
+`Ridge_only`. Kode sudah aman untuk itu di
+`models/Deploy_AnemiaEyes/deploy/inference.py:82-84`.
 
-Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv terpisah dan serverless function tidak bisa membuat subprocess tersebut. `services/nail.py:28` sudah mendeteksi ketiadaan venv dan mengembalikan pesan bersih, jadi endpoint otomatis turun ke mode mata-saja, bukan crash.
-
-### Entry point
-
-Vercel mencari instance `FastAPI` bernama `app` di `app.py`, `index.py`, `server.py`, `main.py`, `wsgi.py`, atau `asgi.py` pada root service, dan di `src/` atau `app/`. Aplikasi ini berada di `backend/main.py`. Supaya tidak ambigu, entrypoint-nya dinyatakan eksplisit di `backend/pyproject.toml`:
-
-```toml
-[tool.vercel]
-entrypoint = "main:app"
-```
-
-Tanpa itu Vercel berhenti dengan:
-`Detected framework "fastapi" in "backend" and must specify an "entrypoint" for runtime "python".`
-
-### Deploy manual lewat dashboard Vercel
-
-1. Buka <https://vercel.com/new> → **Add New → Project** → import repo `liygss/AneVision`.
-2. **Root Directory** biarkan kosong (repo root). Vercel membaca `vercel.json` dan
-   membuat sendiri service `frontend` dan `backend` dari sana.
-3. Framework Preset: **Other**. Biarkan Build Command, Output Directory, dan
-   Install Command kosong, semuanya sudah dideteksi dari `vercel.json`.
-4. Tambahkan environment variable di bawah, lalu Deploy.
-
-| Key | Service | Value | Keterangan |
-|---|---|---|---|
-| `MODEL_MODE` | backend | `real` | **Wajib.** Default-nya `mock`, membuat backend tidak memuat model dan `/predict` selalu menolak dengan "Eye model not loaded". |
-| `FRONTEND_URL` | backend | `https://<nama-proyek>.vercel.app` | Backend mengizinkan CORS hanya untuk nilai ini (`backend/main.py:27-33`). |
-| `VITE_API_BASE_URL` | frontend | *(kosongkan)* | Biarkan kosong agar frontend memakai rewrite `/api` yang sama-origin. |
-
-> Service `backend` memakai Fluid compute dan bundle-nya sekitar 300 MB, masih di
-> bawah batas 500 MB, jadi tidak memerlukan paket Pro.
+Jalur kuku **tidak bisa jalan di Vercel** karena butuh PyTorch di virtualenv
+terpisah dan serverless function tidak bisa membuat subprocess tersebut.
+`services/nail.py:28` sudah mendeteksi ketiadaan venv dan mengembalikan pesan
+bersih, jadi endpoint otomatis turun ke mode mata-saja, bukan crash.
 
 ### Kalau backend tidak di-deploy
 
-Hapus service `backend` dari `vercel.json` sebelum deploy. Beranda, `/demo`, dan
-`/about` tetap utuh, dan `/demo` berjalan penuh di browser tanpa memanggil API.
-Halaman `/screening` mendeteksi backend yang tidak ada dan menampilkan
-pemberitahuan alih-alih gagal diam-diam, karena static host menjawab `/api/*`
-dengan `index.html` berstatus 200. Pemeriksaan konektivitas memverifikasi
+Situs `frontend` tetap utuh: beranda, `/demo`, dan `/about` berfungsi penuh, dan
+`/demo` berjalan sepenuhnya di browser tanpa memanggil API. Halaman
+`/screening` mendeteksi backend yang tidak ada lalu menampilkan pemberitahuan
+alihalih gagal diam-diam, karena server statis menjawab `/api/*` dengan
+`index.html` berstatus 200. Pemeriksaan konektivitas memverifikasi
 `content-type` sehingga kondisi itu tidak dianggap sebagai "server online".
 
+### Verifikasi lokal
+
+```bash
+./start.sh
+curl http://localhost:8000/health
+```
