@@ -1,0 +1,42 @@
+# Dependency set for deploying the backend as a Vercel serverless function.
+#
+# Why this file exists
+# --------------------
+# The full requirements.txt pulls in TensorFlow (1.1 GB installed). Vercel caps
+# a serverless function at 250 MB on Hobby and 1000 MB on Pro, so the full set
+# can never be bundled.
+#
+# What is dropped, and what that actually costs
+# ---------------------------------------------
+#   tensorflow    -> the MobileNetV2 status VALIDATOR. It is not the model that
+#                    produces the Hb number: that is the Ridge regression on 13
+#                    colour features, which is scikit-learn. The validator is
+#                    already optional in the code
+#                    (models/Deploy_AnemiaEyes/deploy/inference.py:82-84 sets
+#                    cnn_ok=False on failure) and the UI labels it "Referensi"
+#                    rather than the deciding result. Dropping it costs a second
+#                    opinion on the anemia label, not the estimate itself.
+#
+#   ultralytics / mediapipe / onnxruntime (requirements_nail.txt)
+#                 -> the YOLO26-seg nail path. It needs a separate virtualenv
+#                    because of a protobuf version conflict, and a serverless
+#                    function cannot spawn that subprocess. services/nail.py:28
+#                    already checks for the venv and returns a clean
+#                    "Model kuku tidak tersedia." error, so the endpoint degrades
+#                    to eye-only instead of crashing.
+#
+# Result: eye-only inference on Vercel, roughly 276 MB installed. That still
+# exceeds the 250 MB Hobby cap, so a Pro plan is required. Reported honestly:
+# this file makes the service *deployable*, not the nail model *available*.
+
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+numpy
+pydantic
+pydantic-settings
+opencv-python-headless
+scikit-learn
+scikit-image
+joblib

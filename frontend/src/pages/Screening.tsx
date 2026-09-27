@@ -31,7 +31,9 @@ import { slimPrediction } from "@/lib/utils";
 import NailArt from "@/components/NailArt";
 import BloodDropArt from "@/components/BloodDropArt";
 import NailBoxCrop, { type NailBox } from "@/components/NailBoxCrop";
-import { analyzeImages } from "@/services/api";
+import { analyzeImages, BackendUnreachableError } from "@/services/api";
+import BackendNotice from "@/components/BackendNotice";
+import { useBackendStatus } from "@/hooks/useBackendStatus";
 import type { PredictionResult } from "@/types/prediction";
 
 const tips = [
@@ -57,6 +59,8 @@ export default function Screening() {
   const [pendingResult, setPendingResult] = useState<PredictionResult | null>(null);
   const nailBoxRef = useRef<NailBox | null>(null);
   const navigate = useNavigate();
+  const { state: backendState, retry: retryBackend } = useBackendStatus();
+  const [backendOffline, setBackendOffline] = useState(false);
 
   const activeStep = eyeFile ? 1 : 0;
   const canAnalyze = eyeFile !== null && !loading;
@@ -133,9 +137,14 @@ export default function Screening() {
         navigate("/results");
       } catch (err: any) {
         clearInterval(stepInterval);
-        setError(
-          err.message || "Kami tidak dapat menganalisis gambar. Pastikan gambar jelas dan coba lagi."
-        );
+        if (err instanceof BackendUnreachableError) {
+          setBackendOffline(true);
+          setError(err.message);
+        } else {
+          setError(
+            err.message || "Kami tidak dapat menganalisis gambar. Pastikan gambar jelas dan coba lagi."
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -567,6 +576,12 @@ export default function Screening() {
           </div>
         </motion.div>
 
+        {/* ============ BACKEND NOT CONNECTED ============ */}
+        <BackendNotice
+          state={backendOffline ? "offline" : backendState}
+          retry={retryBackend}
+        />
+
         {/* ============ ERROR ============ */}
         <AnimatePresence>
           {error && (
@@ -574,12 +589,30 @@ export default function Screening() {
               initial={{ opacity: 0, y: 6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4 }}
-              className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
+              className={
+                backendOffline
+                  ? "bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
+                  : "bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
+              }
             >
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle
+                className={
+                  backendOffline
+                    ? "w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                    : "w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                }
+              />
               <div>
-                <p className="text-sm font-bold text-red-800">Analisis Gagal</p>
-                <p className="text-sm text-red-600 mt-1">{error}</p>
+                <p
+                  className={
+                    backendOffline ? "text-sm font-bold text-amber-800" : "text-sm font-bold text-red-800"
+                  }
+                >
+                  {backendOffline ? "Server tidak dapat dihubungi" : "Analisis Gagal"}
+                </p>
+                <p className={backendOffline ? "text-sm text-amber-700 mt-1" : "text-sm text-red-600 mt-1"}>
+                  {error}
+                </p>
               </div>
             </motion.div>
           )}

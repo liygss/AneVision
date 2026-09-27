@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import router
+from routers.routes import router
 from config.settings import MODEL_MODE, FRONTEND_URL
 from services.inference import load_eye_model, load_nail_model
 
