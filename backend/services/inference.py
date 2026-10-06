@@ -15,26 +15,74 @@ if _MODEL_DIR not in sys.path:
 _eye_model_loaded = False
 _nail_model_loaded = False
 
+# Why loading failed, kept so /health can explain itself instead of leaving
+# "Eye model not loaded" as the only clue. Surfacing the real cause matters most
+# on serverless, where a missing env var or an unbundled weight file looks
+# identical from the outside.
+_eye_error: Optional[str] = None
+_nail_error: Optional[str] = None
+
+# Files that must be present for the eye path to work. Checked explicitly: the
+# upstream import below can also fail for unrelated reasons (a missing
+# TensorFlow, a broken joblib), and the operator needs to know which it was.
+_EYE_REQUIRED_FILES = (
+    os.path.join("outputs", "models", "model_pipeline.joblib"),
+    os.path.join("outputs", "models", "mobilenet_extractor.joblib"),
+    os.path.join("outputs", "models", "mobilenet_anemia.joblib"),
+    "feature_extraction.py",
+)
+
+
+def _missing_eye_artifacts() -> list[str]:
+    return [f for f in _EYE_REQUIRED_FILES if not os.path.exists(os.path.join(_MODEL_DIR, f))]
+
 
 def load_eye_model() -> None:
-    global _eye_model_loaded
+    global _eye_model_loaded, _eye_error
+    # Checked here as well as at startup: in mock mode the weights are never
+    # touched, so this is the only place that notices a deployment missing the
+    # model directory. Reporting it is what lets /health explain the failure
+    # instead of every request saying "Eye model not loaded".
+    missing = _missing_eye_artifacts()
+    if missing:
+        _eye_error = "missing model files: " + ", ".join(missing)
+        _eye_model_loaded = False
+        print(f"[AnemiaEyes] {_eye_error}")
+        return
     try:
-        from inference import predict_from_image as _predict_fn
+        import inference as _eye_inference  # noqa: F401
+        from inference import predict_from_image as _predict_fn  # noqa: F401
         _eye_model_loaded = True
+        _eye_error = None
         print(f"[AnemiaEyes] Model loaded from {_MODEL_DIR}")
     except Exception as e:
-        print(f"[AnemiaEyes] Failed to load model: {e}")
+        _eye_error = f"{type(e).__name__}: {e}"
         _eye_model_loaded = False
+        print(f"[AnemiaEyes] Failed to load model: {_eye_error}")
 
 
 def load_nail_model() -> None:
-    global _nail_model_loaded
+    global _nail_model_loaded, _nail_error
     try:
         from services.nail import load_nail_model as _load_nail
         _nail_model_loaded = _load_nail()
+        _nail_error = None if _nail_model_loaded else "worker did not start (see logs)"
     except Exception as e:
-        print(f"[Nail] Failed to load nail model: {e}")
         _nail_model_loaded = False
+        _nail_error = f"{type(e).__name__}: {e}"
+        print(f"[Nail] Failed to load nail model: {_nail_error}")
+
+
+def model_status() -> dict:
+    """Snapshot of what is loaded, for the health endpoint and the frontend."""
+    return {
+        "eye_loaded": _eye_model_loaded,
+        "eye_error": _eye_error,
+        "eye_dir": _MODEL_DIR,
+        "eye_dir_exists": os.path.isdir(_MODEL_DIR),
+        "nail_loaded": _nail_model_loaded,
+        "nail_error": _nail_error,
+    }
 
 
 def predict_eye(image_bytes: bytes, gender: str = "F") -> dict:

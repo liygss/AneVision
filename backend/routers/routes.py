@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from utils.image_validation import validate_image
-from services.inference import predict_eye, predict_nail
+from services.inference import predict_eye, predict_nail, model_status
 from schemas.prediction import PredictionResponse, EyeResult, NailResult, FusionResult, EstimatedRange, Explanation
 from services.fusion import combine_predictions
 from services.calibration import calibrate_eye
@@ -10,7 +10,10 @@ router = APIRouter()
 
 @router.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    # Reported so a failed model load is visible without digging through server
+    # logs. The frontend turns this into an actionable message instead of the
+    # bare "Eye model not loaded" that a 400 from /predict produces.
+    return {"status": "ok", "models": model_status()}
 
 
 @router.post("/predict", response_model=PredictionResponse)

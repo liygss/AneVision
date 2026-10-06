@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { checkHealth, type BackendState } from "@/services/api";
+import {
+  checkHealth,
+  describeModelProblem,
+  getModelStatus,
+  type BackendState,
+  type ModelStatus,
+} from "@/services/api";
 
 /**
  * Probes the API on mount, and keeps retrying with a growing backoff while it
@@ -10,8 +16,17 @@ import { checkHealth, type BackendState } from "@/services/api";
 const RETRY_DELAYS_MS = [4000, 9000, 16000, 25000, 35000];
 const MAX_PROBE_TIME_MS = 120_000;
 
-export function useBackendStatus(): { state: BackendState; retry: () => void } {
+export interface BackendStatus {
+  state: BackendState;
+  /** Set when the API answers but the models did not load. */
+  modelProblem: string | null;
+  models: ModelStatus | null;
+  retry: () => void;
+}
+
+export function useBackendStatus(): BackendStatus {
   const [state, setState] = useState<BackendState>("checking");
+  const [models, setModels] = useState<ModelStatus | null>(null);
   const attemptRef = useRef(0);
   const startedRef = useRef(0);
   const timerRef = useRef<number | null>(null);
@@ -25,12 +40,16 @@ export function useBackendStatus(): { state: BackendState; retry: () => void } {
 
     void checkHealth().then((ok) => {
       if (stoppedRef.current) return;
+
       if (ok) {
-        setState("online");
+        const status = getModelStatus();
+        setModels(status);
+        // Reachable but unusable: treat as a failure so the user is told the
+        // real reason now, not after uploading a photo.
+        setState(status && !status.eye_loaded ? "degraded" : "online");
         return;
       }
-      // Still unreachable. Keep polling while the budget lasts, because the
-      // usual cause is a cold start rather than a real outage.
+
       const elapsed = performance.now() - startedRef.current;
       const next = attemptRef.current++;
       if (elapsed < MAX_PROBE_TIME_MS && next < RETRY_DELAYS_MS.length) {
@@ -50,7 +69,12 @@ export function useBackendStatus(): { state: BackendState; retry: () => void } {
     };
   }, [probe]);
 
-  return { state, retry: probe };
+  return {
+    state,
+    models,
+    modelProblem: models ? describeModelProblem(models) : null,
+    retry: probe,
+  };
 }
 
 export type { BackendState };

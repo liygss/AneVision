@@ -9,7 +9,43 @@ export interface NailBoxCoords {
   b: number;
 }
 
-export type BackendState = "checking" | "online" | "offline";
+/**
+ * "degraded" means the API answered but the models are not loaded: reachable
+ * yet unusable, so it needs to be told apart from a healthy "online".
+ */
+export type BackendState = "checking" | "online" | "degraded" | "offline";
+
+/** Mirrors the `models` block of GET /health. */
+export interface ModelStatus {
+  eye_loaded: boolean;
+  eye_error: string | null;
+  eye_dir_exists: boolean;
+  nail_loaded: boolean;
+  nail_error: string | null;
+}
+
+/**
+ * Set when /health answers 200 but the models did not load. The API is
+ * reachable in that case, so a plain reachability probe would report "online"
+ * and the failure would only surface as a confusing "Eye model not loaded"
+ * after the user has already picked a photo.
+ */
+let lastModelStatus: ModelStatus | null = null;
+
+export function getModelStatus(): ModelStatus | null {
+  return lastModelStatus;
+}
+
+export function describeModelProblem(status: ModelStatus): string | null {
+  if (status.eye_loaded) return null;
+  if (!status.eye_dir_exists) {
+    return "Bobot model mata tidak ikut ter-deploy. Periksa apakah folder backend/models ikut masuk ke build Vercel.";
+  }
+  if (status.eye_error?.includes("missing model files")) {
+    return `Bobot model mata tidak lengkap di server: ${status.eye_error.replace("missing model files: ", "")}`;
+  }
+  return `Model mata gagal dimuat di server: ${status.eye_error ?? "penyebab tidak diketahui"}.`;
+}
 
 /**
  * A cold start on a serverless host has to load every model, which can take
@@ -109,6 +145,7 @@ export async function checkHealth(): Promise<boolean> {
     if (!response.ok) return false;
     if (!looksLikeJson(response)) return false;
     const data = await response.json();
+    lastModelStatus = (data?.models ?? null) as ModelStatus | null;
     return data?.status === "ok";
   } catch {
     return false;

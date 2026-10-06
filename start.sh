@@ -1,60 +1,97 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# AneVision - Start both Backend and Frontend servers
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FRONTEND_DIR="$ROOT_DIR/frontend"
+BACKEND_DIR="$ROOT_DIR/backend"
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_DIR="$DIR/backend"
-FRONTEND_DIR="$DIR/frontend"
-
-cleanup() {
-  echo ""
-  echo "Stopping servers..."
-  kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-  wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
-  echo "Done."
-  exit 0
-}
-trap cleanup SIGINT SIGTERM
-
-echo "========================================="
-echo "  AneVision - Anemia Screening Platform  "
-echo "========================================="
-echo ""
-
-# --- Backend ---
-echo "[1/2] Starting Backend (FastAPI on :8000)..."
-cd "$BACKEND_DIR"
-
-# Ensure nail subprocess venv exists (mediapipe runs isolated from TensorFlow)
-if [ ! -f ".venv_nail/bin/python" ]; then
-  echo "  -> Creating .venv_nail (nail model worker) ..."
-  python3 -m venv .venv_nail
-  .venv_nail/bin/pip install -q -r requirements_nail.txt
+if ! command -v cloudflared >/dev/null 2>&1; then
+  echo "cloudflared tidak ditemukan. Install dulu: brew install cloudflared"
+  exit 1
 fi
 
-source .venv/bin/activate
-MODEL_MODE=real python3 -u -c "
-import sys; sys.path.insert(0, '.')
-from main import app; import uvicorn
-uvicorn.run(app, host='0.0.0.0', port=8000, log_level='info')
-" &
-BACKEND_PID=$!
-sleep 5
+port_in_use() { nc -z 127.0.0.1 "$1" >/dev/null 2>&1; }
 
-# --- Frontend ---
-echo "[2/2] Starting Frontend (Vite on :5173)..."
-cd "$FRONTEND_DIR"
-npm run dev &
-FRONTEND_PID=$!
-sleep 3
+pick_port() {
+  local start="$1"
+  if ! port_in_use "$start"; then echo "$start"; return; fi
+  for ((p = start + 1; p <= start + 9; p++)); do
+    if ! port_in_use "$p"; then echo "$p"; return; fi
+  done
+  echo "$start"
+}
 
-echo ""
-echo "========================================="
-echo "  Servers are running!                   "
-echo "  Frontend : http://localhost:5173       "
-echo "  Backend  : http://localhost:8000       "
-echo "========================================="
-echo "  Press Ctrl+C to stop both servers."
-echo ""
+PORT_FRONTEND="$(pick_port "${PORT_FRONTEND:-5173}")"
+PORT_BACKEND="$(pick_port "${PORT_BACKEND:-8000}")"
 
-wait
+pids=()
+TUNNEL_LOG=""
+cleanup() {
+  echo ""
+  echo ">> Menghentikan (frontend, backend, tunnel)..."
+  for pid in "${pids[@]:-}"; do
+    pkill -P "$pid" 2>/dev/null || true
+    kill "$pid" 2>/dev/null || true
+  done
+  [ -n "${TUNNEL_LOG:-}" ] && rm -f "$TUNNEL_LOG"
+}
+trap cleanup EXIT
+
+if [ -x "$BACKEND_DIR/.venv/bin/python" ]; then
+  BACKEND_PY="$BACKEND_DIR/.venv/bin/python"
+else
+  BACKEND_PY="python"
+fi
+
+echo "================================================================"
+echo "  Anevision — Start"
+echo "  Frontend : http://localhost:$PORT_FRONTEND"
+echo "  Backend  : http://localhost:$PORT_BACKEND"
+echo "================================================================"
+
+echo ">> Menjalankan backend (uvicorn)..."
+(cd "$BACKEND_DIR" && exec "$BACKEND_PY" -m uvicorn main:app --host 0.0.0.0 --port "$PORT_BACKEND") &
+pids+=($!)
+
+echo ">> Menjalankan frontend (vite)..."
+(cd "$FRONTEND_DIR" && VITE_PROXY_TARGET="http://localhost:$PORT_BACKEND" exec npm run dev -- --port "$PORT_FRONTEND" --strictPort) &
+pids+=($!)
+
+echo ">> Menunggu frontend siap..."
+for _ in $(seq 1 30); do
+  if curl -s -o /dev/null "http://localhost:$PORT_FRONTEND" 2>/dev/null; then break; fi
+  sleep 1
+done
+
+echo ">> Menunggu backend siap..."
+for _ in $(seq 1 30); do
+  if curl -s -o /dev/null "http://localhost:$PORT_BACKEND/health" 2>/dev/null; then break; fi
+  sleep 1
+done
+
+TUNNEL_LOG="$(mktemp)"
+echo ">> Menjalankan Cloudflare Tunnel..."
+cloudflared tunnel --url "http://localhost:$PORT_FRONTEND" >"$TUNNEL_LOG" 2>&1 &
+pids+=($!)
+
+echo ">> Mencari URL tunnel..."
+TUNNEL_URL=""
+for _ in $(seq 1 45); do
+  TUNNEL_URL="$(grep -oE 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "$TUNNEL_LOG" | head -n1 || true)"
+  [ -n "$TUNNEL_URL" ] && break
+  sleep 1
+done
+
+if [ -n "$TUNNEL_URL" ]; then
+  echo ""
+  echo "================================================================"
+  echo "  ✅ Anevision live : $TUNNEL_URL"
+  echo "     Bagikan URL ini ke teman-temanmu!"
+  echo "     (Tekan Ctrl+C untuk menghentikan)"
+  echo "================================================================"
+else
+  echo "!! URL tunnel tidak ditemukan. Log cloudflared:"
+  tail -n 20 "$TUNNEL_LOG"
+fi
+
+wait "${pids[@]}" || true

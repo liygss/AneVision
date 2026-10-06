@@ -59,7 +59,7 @@ export default function Screening() {
   const [pendingResult, setPendingResult] = useState<PredictionResult | null>(null);
   const nailBoxRef = useRef<NailBox | null>(null);
   const navigate = useNavigate();
-  const { state: backendState, retry: retryBackend } = useBackendStatus();
+  const backend = useBackendStatus();
   const [backendOffline, setBackendOffline] = useState(false);
 
   const activeStep = eyeFile ? 1 : 0;
@@ -576,11 +576,12 @@ export default function Screening() {
           </div>
         </motion.div>
 
-        {/* ============ BACKEND NOT CONNECTED ============ */}
-        <BackendNotice
-          state={backendOffline ? "offline" : backendState}
-          retry={retryBackend}
-        />
+        {/* ============ BACKEND STATUS ============ */}
+        {backendOffline ? (
+          <BackendNotice status={{ ...backend, state: "offline" }} />
+        ) : (
+          <BackendNotice status={backend} />
+        )}
 
         {/* ============ ERROR ============ */}
         <AnimatePresence>
