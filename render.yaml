@@ -1,0 +1,27 @@
+# Anevision backend on Render (Blueprint).
+#
+# Create it from the Render dashboard: New > Blueprint > connect this repo
+# (liygss/AneVision, branch main) > select render.yaml > Deploy Blueprint.
+#
+# Phase 1 (no payment method yet): free plan + MODEL_MODE=mock validates the
+# Docker build and the deploy pipeline without hugging the 512 MB RAM ceiling.
+# Phase 2 (after adding a card): set plan to 1c-2g and MODEL_MODE to real, then
+# push — the app boots with both models (measured footprint ~1 GB; see
+# backend/Dockerfile).
+services:
+  - type: web
+    name: anevision-api
+    runtime: docker
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: singapore
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - key: MODEL_MODE
+        value: mock

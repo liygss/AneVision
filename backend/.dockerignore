@@ -1,0 +1,23 @@
+# Build context is backend/ — keep the image to runtime-only files.
+.venv
+.venv_nail
+venv
+**/__pycache__
+**/*.pyc
+*.log
+.git
+.gitignore
+.DS_Store
+
+# Training/eval data & research checkpoints are NOT touched at inference.
+models/Kuku-Anemia/Data Tambahan
+models/Kuku-Anemia/data
+models/**/experiments
+models/**/runs
+models/**/weights
+models/**/*.csv
+models/**/*.cache
+
+# AINailSys ONNX is optional (guarded by try/except in services/nail_worker.py)
+models/AINailSys/models/deployment/*.onnx
+models/AINailSys/models/deployment/*.onnx.data
