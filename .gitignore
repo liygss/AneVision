@@ -74,3 +74,5 @@ Thumbs.db
 # yolo26n-seg.pt di root Kuku-Anemia. yolo11n.pt / yolo26n.pt hanya dirujuk
 # oleh experiments/yolo/train.py sebagai titik awal (default --model).
 backend/models/**/weights/*.pt
+.vercel
+.env*
