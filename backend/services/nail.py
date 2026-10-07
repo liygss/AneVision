@@ -69,7 +69,8 @@ def load_nail_model() -> bool:
     global _proc
     _shutdown()
 
-    if not os.path.exists(_VENV_NAIL_PY):
+    # On serverless (Vercel), prefer in-process to avoid subprocess issues
+    if os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or not os.path.exists(_VENV_NAIL_PY):
         print(f"[Kuku-Anemia] .venv_nail not found at {_VENV_NAIL_PY}; "
               "falling back to in-process import. Run: python3 -m venv .venv_nail "
               "&& .venv_nail/bin/pip install -r requirements_nail.txt")
