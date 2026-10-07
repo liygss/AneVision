@@ -23,6 +23,9 @@
                         "models/Kuku-Anemia/core/models/**"
                     ]
                 }
+            },
+            "env": {
+                "ANEVIA_SEG26_WEIGHTS": "models/Kuku-Anemia/experiments/yolo26_seg/runs/seg26/weights/best.pt"
             }
         }
     },
