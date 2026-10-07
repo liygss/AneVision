@@ -14,11 +14,6 @@ tensorflow
 # (Vercel tidak punya .venv_nail -> services/nail.py memuat worker langsung)
 onnxruntime
 # NOTE: the nail model runs in a SEPARATE virtualenv (.venv_nail) because
-# mediapipe 0.10.x needs protobuf 4.x while TensorFlow needs protobuf >= 6.31.1.
 # See requirements_nail.txt. Both venvs are created by start.sh; on Vercel the
 # Python runtime is a single process, so the nail path is imported in-process
 # there instead (see services/nail.py).
-ultralytics
-mediapipe==0.10.21
-torch
-torchvision

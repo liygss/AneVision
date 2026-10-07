@@ -22,7 +22,7 @@ WORKDIR /app
 # the frontend already treats a missing CNN status as "Referensi".
 COPY requirements.txt ./
 RUN python -m venv .venv \
-    && grep -viE '^[[:space:]]*tensorflow' requirements.txt > /tmp/main-requirements.txt \
+    && grep -viE '^[[:space:]]*(tensorflow|torch|torchvision|ultralytics|mediapipe)' requirements.txt > /tmp/main-requirements.txt \
     && .venv/bin/pip install --no-cache-dir -r /tmp/main-requirements.txt
 
 # --- Nail venv (YOLO seg + mediapipe hand landmarks + ONNX adjustment),
