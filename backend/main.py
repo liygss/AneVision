@@ -72,6 +72,12 @@ app.add_middleware(
 )
 
 
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "AneVision API"}
+
+
 @app.get("/api/debug_nail")
 async def debug_nail():
     try:
