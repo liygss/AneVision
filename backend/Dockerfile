@@ -20,8 +20,11 @@ WORKDIR /app
 # the optional CNN status validator. The authoritative Hb comes from the Ridge
 # pipeline (sklearn), so dropping TF keeps the container ~1 GB smaller while
 # the frontend already treats a missing CNN status as "Referensi".
+# torch is preinstalled from the CPU index (as in the nail venv) so the later
+# requirements install is already satisfied and never pulls the CUDA wheels.
 COPY requirements.txt ./
 RUN python -m venv .venv \
+    && .venv/bin/pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
     && grep -viE '^[[:space:]]*tensorflow' requirements.txt > /tmp/main-requirements.txt \
     && .venv/bin/pip install --no-cache-dir -r /tmp/main-requirements.txt
 
