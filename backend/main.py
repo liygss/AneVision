@@ -71,6 +71,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/api/debug_nail")
+async def debug_nail():
+    try:
+        from services import nail
+        res = nail._load_inprocess_worker()
+        return {"ok": res is not None}
+    except Exception as e:
+        import traceback
+        return {"ok": False, "err": str(e)[:500]}
+
 app.include_router(router)
 
 # Vercel Services routes by rewriting "/api/*" to this service while the service
@@ -85,12 +96,3 @@ app.include_router(router, prefix="/api")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-@app.get("/api/debug_nail")
-async def debug_nail():
-    try:
-        from services import nail
-        res = nail._load_inprocess_worker()
-        return {"ok": res is not None}
-    except Exception as e:
-        return {"ok": False, "err": str(e)[:200]}
