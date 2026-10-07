@@ -52,7 +52,11 @@ def _load():
     global _ainailsys_s1, _ainailsys_s2, _ainailsys_s1_meta, _ainailsys_s2_meta
     global NAIL_MODEL_MAE_G_DL, NAIL_MODEL_R2, WHITE_SOURCE_LOCKED
     from core import config as cfg
-    from core.hand_landmarks import HandLandmarkExtractor
+    try:
+        from core.hand_landmarks import HandLandmarkExtractor
+    except Exception as _e:
+        HandLandmarkExtractor = None
+        print(f"[nail_worker] HandLandmarkExtractor import failed: {_e}", file=sys.stderr)
     from core.seg_detector import Yolo26SegDetector
 
     # Utama: CNN ResNet18 (ONNX) — pengganti ElasticNet sesuai domain sewa
@@ -81,7 +85,11 @@ def _load():
         NAIL_MODEL_MAE_G_DL = round(float(_nail_model.meta.get("cv_mae_g_dl", 1.596)), 3)
         NAIL_MODEL_R2 = round(float(_nail_model.meta.get("cv_r2", 0.399)), 3)
         WHITE_SOURCE_LOCKED = _nail_model.meta.get("white_source", "auto")
-    _hand_landmarker = HandLandmarkExtractor(num_hands=2)
+    try:
+        _hand_landmarker = HandLandmarkExtractor(num_hands=2) if HandLandmarkExtractor else None
+    except Exception as _e:
+        _hand_landmarker = None
+        print(f"[nail_worker] HandLandmarkExtractor init failed: {_e}", file=sys.stderr)
     # YOLO26-seg detector: two-pass runtime (conf 0.30 @ 640 -> fallback 0.10 @ 1280),
     # per-pixel nail masks + layout skin box (2.3x nail width) = GitHub canonical.
     _seg_detector = Yolo26SegDetector(
