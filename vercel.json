@@ -12,7 +12,7 @@
             "functions": {
                 "main.py": {
                     "maxDuration": 300,
-                    "includeFiles": "models/**"
+                    "includeFiles": "models/Deploy_AnemiaEyes/deploy/outputs/models/**"
                 }
             }
         }
