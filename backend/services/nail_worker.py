@@ -31,9 +31,9 @@ from services.calibration import (  # noqa: E402
     calibrate_nail,
 )
 
-NAIL_MODEL_MAE_G_DL = 1.596  # overridden from seg_runtime metadata at load
-NAIL_MODEL_R2 = 0.399        # overridden from seg_runtime metadata at load
-WHITE_SOURCE_LOCKED = "auto"  # matches core/models/seg_runtime (training white=auto)
+NAIL_MODEL_MAE_G_DL = 1.359  # overridden from model metadata at load (CNN default)
+NAIL_MODEL_R2 = 0.312        # overridden from model metadata at load (CNN default)
+WHITE_SOURCE_LOCKED = "auto"  # ElasticNet: white reference; CNN: colornorm
 
 _nail_model = None
 _hand_landmarker = None
@@ -53,15 +53,34 @@ def _load():
     global NAIL_MODEL_MAE_G_DL, NAIL_MODEL_R2, WHITE_SOURCE_LOCKED
     from core import config as cfg
     from core.hand_landmarks import HandLandmarkExtractor
-    from core.inference import NailHbModel
     from core.seg_detector import Yolo26SegDetector
 
-    # GitHub canonical runtime: NailHbModel() auto-resolves to
-    # core/models/seg_runtime (seg26-mask features + white=auto) when present.
-    _nail_model = NailHbModel()
-    NAIL_MODEL_MAE_G_DL = round(float(_nail_model.meta.get("cv_mae_g_dl", 1.596)), 3)
-    NAIL_MODEL_R2 = round(float(_nail_model.meta.get("cv_r2", 0.399)), 3)
-    WHITE_SOURCE_LOCKED = _nail_model.meta.get("white_source", "auto")
+    # Utama: CNN ResNet18 (ONNX) — pengganti ElasticNet sesuai domain sewa
+    # (export_cnn_onnx.py). Fallback: ElasticNet seg_runtime bila ONNX tidak
+    # ada / gagal load, supaya /predict tetap hidup.
+    try:
+        from core.cnn_inference import NailHbCnnModel
+
+        _nail_model = NailHbCnnModel()
+        NAIL_MODEL_MAE_G_DL = round(
+            float(_nail_model.meta.get("per_patient_mae_g_dl")
+                  or _nail_model.meta.get("test_mae_g_dl") or 1.359), 3)
+        NAIL_MODEL_R2 = round(float(_nail_model.meta.get("test_r2", 0.312)), 3)
+        WHITE_SOURCE_LOCKED = "auto"  # colornorm CNN menggantikan white reference
+        # stdout dipakai protokol baris -> log ke stderr saja
+        print(f"[nail_worker] CNN ONNX siap: {_nail_model.onnx_path.name} "
+              f"MAE {NAIL_MODEL_MAE_G_DL} g/dL", file=sys.stderr, flush=True)
+    except Exception as _cnn_exc:
+        print(f"[nail_worker] CNN ONNX tidak bisa dimuat ({_cnn_exc}); "
+              "fallback ke ElasticNet seg_runtime", file=sys.stderr, flush=True)
+        from core.inference import NailHbModel
+
+        # GitHub canonical runtime: NailHbModel() auto-resolves to
+        # core/models/seg_runtime (seg26-mask features + white=auto) when present.
+        _nail_model = NailHbModel()
+        NAIL_MODEL_MAE_G_DL = round(float(_nail_model.meta.get("cv_mae_g_dl", 1.596)), 3)
+        NAIL_MODEL_R2 = round(float(_nail_model.meta.get("cv_r2", 0.399)), 3)
+        WHITE_SOURCE_LOCKED = _nail_model.meta.get("white_source", "auto")
     _hand_landmarker = HandLandmarkExtractor(num_hands=2)
     # YOLO26-seg detector: two-pass runtime (conf 0.30 @ 640 -> fallback 0.10 @ 1280),
     # per-pixel nail masks + layout skin box (2.3x nail width) = GitHub canonical.
@@ -343,6 +362,8 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
     seg_mid_vector = None
     seg_mid_coverage = None
     n_instances = 0
+    # CNN tidak punya vektor fitur 42-dim -> guard pakai coverage saja.
+    is_cnn = not getattr(_nail_model, "feature_order", None)
     for f, nm, sm in items:
         tb, lb, bb, rb = f.nail_box
         if bb - tb < 25 or rb - lb < 25:
@@ -355,12 +376,13 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
                     img_rgb, f, nail_mask=nm, skin_mask=sm,
                     gender=gender_str, white_source=WHITE_SOURCE_LOCKED)
                 if f is middle:
-                    seg_mid_vector = _nail_model.features_for_masks(
-                        img_rgb, f, nail_mask=nm, skin_mask=sm,
-                        white_source=WHITE_SOURCE_LOCKED)[0]
                     t, l, b, r = f.nail_box
                     if b > t and r > l:
                         seg_mid_coverage = float((nm[t:b, l:r] > 0).mean())
+                    if not is_cnn:
+                        seg_mid_vector = _nail_model.features_for_masks(
+                            img_rgb, f, nail_mask=nm, skin_mask=sm,
+                            white_source=WHITE_SOURCE_LOCKED)[0]
             else:
                 out = _nail_model.predict(
                     img_rgb, f, gender=gender_str,
@@ -386,7 +408,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
     outlier_note = (f"{dropped} kuku di luar rentang wajar diabaikan" if dropped else None)
 
     # Reject entirely when the model is wildly out of range — no calibration
-    # or clamping can make an ElasticNet output like -8 or +30 meaningful.
+    # or clamping can make a raw output like -8 or +30 meaningful.
     _RAW_MIN, _RAW_MAX = 0.0, 25.0
     if hb_raw < _RAW_MIN or hb_raw > _RAW_MAX:
         return {
@@ -430,33 +452,22 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
     flags_ok, issues = _guard_nail(
         img_rgb, middle, hb_raw, n_instances,
         seg_coverage=seg_mid_coverage, seg_vector=seg_mid_vector)
+    # Peringatan lunak (fitur/Hb di luar band pelatihan) tidak lagi
+    # ditampilkan ke pengguna: nail tetap ikut fusi (flags_ok True) tanpa
+    # pesan apa pun. Hanya kegagalan keras (flags_ok False) yang
+    # mempertahankan pesannya.
+    if flags_ok:
+        issues = ""
     if outlier_note:
         issues = (issues + "; " if issues else "") + outlier_note
 
-    # Soft-drift warning (keeps the nail in the fusion): when features leave
-    # the training distribution AND the value is outside the credible band
-    # (< 9 / > 16 g/dL) the estimate is less trustworthy, but the nail still
-    # participates in the eye+nail fusion. routes.py drops the nail anyway
-    # when it disagrees with the eye by > 2.5 g/dL, so a bogus extreme value
-    # cannot drag the combined estimate. We only surface a clearer warning.
-    if flags_ok and issues and (
-        "features_out_of_range" in issues or "hb_out_of_range" in issues
-    ):
-        if hb_g_dl < 9.0 or hb_g_dl > 16.0:
-            issues = (
-                "Fitur kuku di luar jangkauan data latih dan estimasi berada "
-                "di tepi rentang wajar; hasil kuku tetap dipakai dalam "
-                "estimasi gabungan dengan kewaspadaan lebih tinggi."
-            )
-
     # AINailSys post-hoc adjustment: if the CNN classifier flags the nail as
-    # anemic, subtract the learned coefficient from the ElasticNet prediction.
-    # This is equivalent to the full 43-feature model but avoids re-extracting
-    # features — the binary flag is applied as a fixed offset.
-    # The adjustment is GATED: it only fires when the CNN is confident
-    # (prob >= AINAILSYS_CONF_MIN) AND the ElasticNet estimate is already on the
-    # anemic side of the WHO threshold. A low-confidence "anemic" call on an
-    # otherwise normal nail must not drag the estimate below the eye.
+    # anemic, subtract the learned coefficient from the Hb estimate (CNN maupun
+    # fallback ElasticNet). The adjustment is GATED: it only fires when the
+    # classifier is confident (prob >= AINAILSYS_CONF_MIN) AND the estimate is
+    # already on the anemic side of the WHO threshold. A low-confidence
+    # "anemic" call on an otherwise normal nail must not drag the estimate
+    # below the eye.
     ainailsys_label = "unknown"
     ainailsys_stage2 = "N/A"
     ainailsys_confidence = 0.0
@@ -547,8 +558,19 @@ def _guard_nail(img_rgb, middle, hb_raw, n_instances,
     coverage of the nail box + the model feature vector + the training
     feature bounds (core/outputs/features_seg26_seg26_auto.csv). Hb/feature
     drift is softened (warning), coverage is hard.
+    CNN path: tanpa vektor fitur 42-dim — guard hanya coverage + rentang Hb
+    (bounds kosong -> check fitur trivially pass).
     Legacy paths (no pixel masks): best_nail_mask coverage within the box.
     """
+    is_cnn = not getattr(_nail_model, "feature_order", None)
+    if is_cnn and seg_coverage is not None:
+        try:
+            from core.guard import assess_hb
+            g = assess_hb(seg_coverage, hb_raw, [], [], {},
+                          n_instances=n_instances)
+            return _softened_guard(g)
+        except Exception:
+            pass  # fall back to the box-mask guard below
     if seg_coverage is not None and seg_vector is not None:
         try:
             from core.guard import assess_hb, feature_bounds
@@ -569,7 +591,9 @@ def _guard_nail(img_rgb, middle, hb_raw, n_instances,
         cov = None
     try:
         from core.guard import assess_hb, feature_bounds
-        g = assess_hb(cov, hb_raw, [], [], feature_bounds(), n_instances=n_instances)
+        # CNN: bounds fitur 42-dim tidak relevan -> pass {} (check trivial pass)
+        bounds = {} if is_cnn else feature_bounds()
+        g = assess_hb(cov, hb_raw, [], [], bounds, n_instances=n_instances)
         return _softened_guard(g)
     except Exception:
         from services.calibration import HB_MIN_G_DL, HB_MAX_G_DL

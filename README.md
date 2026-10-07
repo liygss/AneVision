@@ -55,18 +55,18 @@ backend/    FastAPI + scikit-learn + TensorFlow + PyTorch(ultralytics) + ONNX Ru
 | Estimasi Hb dari citra mata | scikit-learn | Ridge Regression atas 13 fitur warna (Lab/HSV/RGB) | MAE ±1.30 g/dL |
 | Validasi status mata | TensorFlow / Keras | MobileNetV2 **frozen** (ImageNet) + LogisticRegression | akurasi 0.734, recall 0.800 |
 | Deteksi & segmentasi kuku | PyTorch (ultralytics) | YOLO26-seg | mAP50 0.965, Dice 0.847 |
-| Estimasi Hb dari kuku | scikit-learn | RobustScaler + ElasticNet atas 42 fitur persentil RGB | MAE ±1.60 g/dL |
+| Estimasi Hb dari kuku | ONNX Runtime | **CNN ResNet18 v2** (crop kuku, colornorm whitep98 + TTA) | MAE ±1.36 g/dL |
 | Penyesuaian kondisi kuku | ONNX Runtime | ResNet18 2 tahap (opsional, degrade aman) | - |
-| Fusi hasil | numpy | rata-rata berbobot inverse-MAE (mata 0.552 : kuku 0.448) | - |
+| Fusi hasil | numpy | rata-rata berbobot inverse-MAE (mata 0.671 : kuku 0.329) | - |
 
-Angka Hb sendiri dihasilkan oleh regresi klasik, bukan deep learning. MobileNetV2 diperlakukan sebagai feature extractor beku dan hanya jadi validator, sedangkan YOLO hanya berguna untuk memotong area kuku. Ini keputusan sadar, bukan keterbatasan: pada 211 citra mata, model besar cenderung overfit.
+Hb dari mata tetap regresi klasik (Ridge) — pada 211 citra mata, model besar cenderung overfit; Hb dari kuku kini CNN ResNet18 (ONNX, domain dataset sewa 5.782 pasien) dengan fallback ElasticNet 42-fitur bila ONNX gagal dimuat. MobileNetV2 diperlakukan sebagai feature extractor beku dan hanya jadi validator, sedangkan YOLO berguna untuk memotong area kuku.
 
 Ambang anemia mengikuti WHO: wanita < 12.0 g/dL, pria < 13.0 g/dL. Jenis kelamin wajib diisi pengguna dan tidak pernah ditebak sistem, karena `is_female` adalah salah satu fitur input Ridge.
 
 ### Keterbatasan yang perlu diketahui
 
-- MAE ±1.3 sampai ±1.6 g/dL. Rentang estimasi dan tingkat keyakinan ditampilkan karena itu, tapi keyakinan model **sengaja** dibatasi maksimum 0.85 supaya tidak pernah menampilkan "100% yakin" atas estimasi yang rentang errornya segitu lebar.
-- Dataset mata hanya 211 citra (5-fold cross-validation). Dataset kuku 250 foto (held-out: MAE 1.49 g/dL, AUC 0.864).
+- MAE ±1.3 sampai ±1.4 g/dL. Rentang estimasi dan tingkat keyakinan ditampilkan karena itu, tapi keyakinan model **sengaja** dibatasi maksimum 0.85 supaya tidak pernah menampilkan "100% yakin" atas estimasi yang rentang errornya segitu lebar.
+- Dataset mata hanya 211 citra (5-fold cross-validation). CNN kuku dilatih dari dataset sewa (5.782 pasien, test MAE 1.36 g/dL per pasien); foto free-bg bergaya MSU adalah domain berbeda — eksperimen mencatat degradasi lintas-domain, jadi hasil kuku tetap wajib dikonfirmasi dengan lab.
 - Prediksi sensitif terhadap pencahayaan, kualitas kamera, pigmen kulit, sudut, dan ketajaman gambar.
 - Tidak ada variant threshold untuk ibu hamil; protokol mengoleksi metadata kehamilan tetapi belum diimplementasikan.
 

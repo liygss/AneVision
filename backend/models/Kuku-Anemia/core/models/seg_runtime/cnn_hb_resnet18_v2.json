@@ -1,0 +1,34 @@
+{
+  "model": "CNN resnet18 v2 (ONNX) -> Hb regresi",
+  "arch": "resnet18",
+  "source_tag": "resnet18_v2",
+  "onnx_file": "cnn_hb_resnet18_v2.onnx",
+  "colornorm": "whitep98",
+  "tta": true,
+  "rebalance": true,
+  "input_size": 224,
+  "resize": 256,
+  "center_crop": 224,
+  "imagenet_mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "imagenet_std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "target_unit": "g/L",
+  "output_unit": "g/dL",
+  "n_images": 11563,
+  "test_mae_gperL": 14.16879408087285,
+  "test_mae_g_dl": 1.417,
+  "per_patient_mae_gperL": 13.591,
+  "per_patient_mae_g_dl": 1.359,
+  "test_r2": 0.3121234387948828,
+  "test_pearson": 0.5612961364483419,
+  "who_threshold_female_g_dl": 12.0,
+  "who_threshold_male_g_dl": 13.0,
+  "feature_pipeline": "cnn_crop_margin1.6_whitep98"
+}

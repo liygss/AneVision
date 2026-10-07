@@ -10,17 +10,17 @@ outputs are put on the same scale so the fusion stays consistent:
 
 Bias constants
 --------------
-Measured empirically through the backend runtime nail path (``_manual_finger``
-+ ``white_source="auto"``) on the 250-photo MSU set, comparing predictions with
-the lab Hb:
+Model runtime utama kini CNN ResNet18 v2 (ONNX, domain sewa). Eksperimen
+C12 (hb_newdata) mengukur bias CNN in-domain ≈ 0, sehingga koreksi global
+dinolkan. Nilai lama di bawah (dipakai saat runtime masih ElasticNet) tetap
+terdokumentasi sebagai riwayat:
 
     canonical model   : mean(pred - lab) = -0.812 g/dL  (MAE 2.005)
     seg_runtime model : mean(pred - lab) = -1.393 g/dL  (MAE 2.265)
 
-The runtime loads ``core/models/seg_runtime`` (``NailHbModel()`` auto-resolves
-to it, and the worker pulls MAE/R² from its metadata), so ``NAIL_BIAS_G_DL``
-uses the seg_runtime value (-1.393). A positive bias means the model
-under-predicts, so the correction adds it back.
+A positive bias means the model under-predicts, so the correction adds it
+back.  Jika kelak diukur ulang bias runtime CNN pada foto bebas, perbarui
+``NAIL_BIAS_G_DL`` di sini (dan catat protocol/metadata-nya).
 
 The eye Ridge (MODEL_CONTRACT, MAE 1.296 g/dL) is already centered on the
 physiological range, so its correction is 0. Update the constants below when a
@@ -36,8 +36,11 @@ HB_MIN_G_DL = 4.0
 HB_MAX_G_DL = 18.0
 
 # mean(prediction - lab) on the runtime path; correction = value - bias
-# seg_runtime model is what the runtime actually loads (see bias doc above).
-NAIL_BIAS_G_DL = -1.393
+# CNN ResNet18 v2: in-domain bias ≈ 0 (C12) -> no global shift.
+# Nilai historis ElasticNet (-1.393) tidak dipakai lagi; bila suatu saat
+# perlu diaktifkan (mis. khusus saat fallback ElasticNet), kembalikan
+# konstanta ini sesuai hasil ukur ulang pada dokumen di atas.
+NAIL_BIAS_G_DL = 0.0
 EYE_BIAS_G_DL = 0.0
 
 # |eye - nail| above this (g/dL) is flagged as a disagreement

@@ -64,6 +64,21 @@ export class BackendUnreachableError extends Error {
 }
 
 /**
+ * Thrown when the API rejects the upload itself (HTTP 400 with a structured
+ * `{code, message}` detail), e.g. a photo that is not an eye/hand. The code
+ * lets the Screening page route the failure (nail rejections open the nail
+ * retry panel instead of the generic error banner).
+ */
+export class ApiRejectionError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "ApiRejectionError";
+    this.code = code;
+  }
+}
+
+/**
  * A static SPA host (e.g. Vercel without an /api rewrite) answers unknown
  * paths with index.html and HTTP 200. Treating that as a healthy API is the
  * classic way a frontend silently pretends to be connected, so the
@@ -111,7 +126,8 @@ export async function analyzeImages(
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
+    const json = looksLikeJson(response);
+    const errorData = json ? await response.json().catch(() => null) : null;
 
     // A 404 on the API path means the route does not exist on the host, which
     // is a routing problem (missing rewrite or a backend that serves a
@@ -123,7 +139,24 @@ export async function analyzeImages(
       );
     }
 
-    throw new Error(errorData?.detail || "Prediksi gagal. Silakan coba lagi.");
+    // When a dev/reverse proxy cannot reach the backend it answers with plain
+    // text or HTML (Vite's 500 on ECONNREFUSED), and FastAPI answers 5xx when
+    // the process itself fails. Neither rejects the user's photo, so both must
+    // surface as a connectivity problem (amber notice) instead of the red
+    // "Analisis Gagal / Prediksi gagal" fallback.
+    if (!json || response.status >= 500) {
+      throw new BackendUnreachableError(
+        "Server analisis tidak dapat dihubungi. Pastikan backend berjalan, lalu coba lagi."
+      );
+    }
+
+    const detail = errorData?.detail;
+    if (detail && typeof detail === "object" && typeof detail.message === "string") {
+      throw new ApiRejectionError(String(detail.code || "rejected"), detail.message);
+    }
+    throw new Error(
+      (typeof detail === "string" && detail) || "Prediksi gagal. Silakan coba lagi."
+    );
   }
 
   if (!looksLikeJson(response)) {

@@ -519,8 +519,8 @@ export default function Home() {
                   {
                     icon: <Hand className="w-5 h-5" />,
                     title: "Analisis Kuku",
-                    desc: "Deteksi & segmentasi kuku (YOLO26-seg), lalu estimasi Hb dengan ElasticNet.",
-                    metric: "MAE ±1.6 g/dL",
+                    desc: "Deteksi & segmentasi kuku (YOLO26-seg), lalu estimasi Hb dengan CNN ResNet18.",
+                    metric: "MAE ±1.4 g/dL",
                   },
                   {
                     icon: <ScanSearch className="w-5 h-5" />,

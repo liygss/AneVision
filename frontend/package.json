@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "dev:backend": "cd ../backend && { [ -x .venv/bin/python ] && ./.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000; } || python -m uvicorn main:app --host 0.0.0.0 --port 8000",
+    "dev:full": "concurrently -k -n web,api -c cyan,magenta \"npm run dev\" \"npm run dev:backend\"",
     "tunnel": "ngrok http 5173",
     "tunnel:cf": "cloudflared tunnel --url http://localhost:5173",
     "share-cf": "concurrently -k -n frontend,backend,tunnel -c cyan,green,magenta \"npm run dev\" \"npm run dev:backend\" \"npm run tunnel:cf\"",

@@ -1,11 +1,28 @@
+import re
+
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from utils.image_validation import validate_image
 from services.inference import predict_eye, predict_nail, model_status
+from services.content_guard import check_nail_image_bytes
 from schemas.prediction import PredictionResponse, EyeResult, NailResult, FusionResult, EstimatedRange, Explanation
 from services.fusion import combine_predictions
 from services.calibration import calibrate_eye
 
 router = APIRouter()
+
+# Nail failures caused by the photo itself (wrong subject, no hand in frame,
+# unusable quality) reject the whole analysis. Failures of the model/runtime
+# (worker timeout, model not loaded) only drop the nail modality: a transient
+# server hiccup must not punish a user whose photos are fine.
+_OPERATIONAL_NAIL_ERROR = re.compile(r"merespons|tidak tersedia|gagal menganalisis", re.I)
+
+
+def _nail_reject(message: str) -> None:
+    """HTTP 400 the frontend maps to the nail retry panel (code invalid_nail_image)."""
+    raise HTTPException(
+        status_code=400,
+        detail={"code": "invalid_nail_image", "message": message},
+    )
 
 
 @router.get("/health")
@@ -23,30 +40,47 @@ async def predict(
     gender: str = Form("F", description="Gender: F/Female/Perempuan or M/Male/Laki-laki"),
     nail_box: str = Form(None, description="Optional normalized l,t,r,b (0-1) box around the nail, from a manual crop"),
 ):
+    # Cheap user-input validation first: a wrong-subject photo is rejected
+    # before any model runs, so the user gets an explanation instead of a
+    # confident-looking estimate (or a silently dropped nail slot).
     await validate_image(eye_image)
+
+    nail_contents = None
+    if nail_image is not None:
+        await validate_image(nail_image, code="invalid_nail_image")
+        nail_contents = await nail_image.read()
+        # A manually drawn nail box is an explicit user statement about where
+        # the nail is, so the content heuristic is skipped for that attempt.
+        if not nail_box:
+            reason = check_nail_image_bytes(nail_contents)
+            if reason is not None:
+                _nail_reject(reason)
 
     eye_contents = await eye_image.read()
 
     eye_result_raw = predict_eye(eye_contents, gender)
 
     if "error" in eye_result_raw:
-        raise HTTPException(status_code=400, detail=eye_result_raw["error"])
+        message = eye_result_raw["error"]
+        code = eye_result_raw.get("error_code")
+        raise HTTPException(
+            status_code=400,
+            detail={"code": code, "message": message} if code else message,
+        )
 
     # Nail prediction (optional)
     nail_result = None
     nail_error = None
-    if nail_image is not None:
-        try:
-            await validate_image(nail_image)
-            nail_contents = await nail_image.read()
-            nail_result_raw = predict_nail(nail_contents, gender, nail_box=nail_box)
-            if nail_result_raw is not None:
-                if "error" in nail_result_raw:
+    if nail_contents is not None:
+        nail_result_raw = predict_nail(nail_contents, gender, nail_box=nail_box)
+        if nail_result_raw is not None:
+            if "error" in nail_result_raw:
+                if _OPERATIONAL_NAIL_ERROR.search(nail_result_raw["error"]):
                     nail_error = nail_result_raw["error"]
                 else:
-                    nail_result = nail_result_raw
-        except Exception:
-            pass
+                    _nail_reject(nail_result_raw["error"])
+            else:
+                nail_result = nail_result_raw
 
     # Eye fields
     eye_hgb_raw = eye_result_raw.get("hgb_predicted", 12.0)

@@ -3,9 +3,11 @@
 # the main venv needs protobuf >=6.31.1 for TensorFlow (eye CNN). They are
 # incompatible in a single process, so nail inference runs in a subprocess.
 mediapipe==0.10.21
+# CNN kuku (core/cnn_inference.py): PIL untuk preprocess paritas training
+pillow
 scikit-learn
 joblib
 # GitHub canonical runtime: YOLO26-seg nail masking (seg26)
 ultralytics
-# AINailSys post-hoc adjustment (backend/models/AINailSys ONNX)
+# CNN Hb (cnn_hb_resnet18_v2.onnx) + AINailSys post-hoc adjustment
 onnxruntime

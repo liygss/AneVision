@@ -433,7 +433,7 @@ export default function Results() {
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Hand className="w-4 h-4 text-navy-600" />
-                    <p className="text-xs font-bold text-navy-600 uppercase tracking-wider">Kuku · ElasticNet</p>
+                    <p className="text-xs font-bold text-navy-600 uppercase tracking-wider">Kuku · CNN ResNet18</p>
                     <span className="text-[10px] font-bold bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full ml-auto">Weight: {((result.nail!.weight || 0) * 100).toFixed(1)}%</span>
                   </div>
                   <p className={`text-xl font-extrabold ${
@@ -441,11 +441,11 @@ export default function Results() {
                   }`}>
                     {result.nail!.status}
                   </p>
-                  <p className="text-xs text-navy-500 mt-1">Hgb: {result.nail!.estimated_hb?.toFixed(1)} g/dL (raw + koreksi {result.nail!.bias_correction ?? "+1.4"} g/dL)</p>
+                  <p className="text-xs text-navy-500 mt-1">Hgb: {result.nail!.estimated_hb?.toFixed(1)} g/dL (raw + koreksi {(result.nail!.bias_correction ?? 0).toFixed(1)} g/dL)</p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Threshold: ≥ {result.nail!.threshold_used}</span>
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">MAE: ±{result.nail!.mae} g/dL</span>
-                    <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">R²: 0.399</span>
+                    <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">R²: 0.312</span>
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Deteksi: seg26 · conf {(result.nail!.hand_confidence || 0).toFixed(2)}</span>
                     {result.nail!.nail_count != null && result.nail!.nail_count! > 1 && (
                       <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">{result.nail!.nail_count} kuku (median)</span>
@@ -465,7 +465,7 @@ export default function Results() {
                   <p className="text-xs font-bold text-primary-800 uppercase tracking-wider mb-2">Weighted Fusion (by MAE)</p>
                   <div className="flex flex-wrap items-center gap-4 text-xs text-navy-600">
                     <span>Mata: <strong className="text-navy-800">{((result.fusion!.eye_weight || 0) * 100).toFixed(1)}%</strong> (MAE 1.3)</span>
-                    <span>Kuku: <strong className="text-navy-800">{((result.fusion!.nail_weight || 0) * 100).toFixed(1)}%</strong> (MAE 1.6)</span>
+                    <span>Kuku: <strong className="text-navy-800">{((result.fusion!.nail_weight || 0) * 100).toFixed(1)}%</strong> (MAE 2.6)</span>
                     <span className="text-primary-700 font-bold">→ Hb Gabungan: {result.fusion!.estimated_hb?.toFixed(1)} g/dL</span>
                   </div>
                 </div>

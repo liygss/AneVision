@@ -6,10 +6,11 @@ import subprocess
 import threading
 from typing import Optional
 
-# Model constants from core/models/seg_runtime/model_metadata.json
-NAIL_MODEL_MAE_G_DL = 1.596
-NAIL_MODEL_R2 = 0.399
-NAIL_MODEL_NAME = "RobustScaler + ElasticNet (seg_runtime)"
+# Model constants from core/models/seg_runtime/cnn_hb_resnet18_v2.json
+# (worker memuat MAE/R2 asli dari metadata saat load; nilai di bawah = default).
+NAIL_MODEL_MAE_G_DL = 1.359
+NAIL_MODEL_R2 = 0.312
+NAIL_MODEL_NAME = "CNN ResNet18 v2 (ONNX, sewa)"
 
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _VENV_NAIL_PY = os.path.join(_BACKEND_DIR, ".venv_nail", "bin", "python")

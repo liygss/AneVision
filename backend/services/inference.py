@@ -86,17 +86,32 @@ def model_status() -> dict:
 
 
 def predict_eye(image_bytes: bytes, gender: str = "F") -> dict:
+    try:
+        buf = np.frombuffer(image_bytes, dtype=np.uint8)
+        img_bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+    except Exception:
+        img_bgr = None
+
+    if img_bgr is None:
+        return {
+            "error": "Gambar tidak dapat dibaca. Coba unggah foto lain.",
+            "error_code": "invalid_eye_image",
+        }
+
+    # Content guard runs before the model check so a wrong-subject photo is
+    # explained ("bukan foto mata") instead of producing a confident Hb from
+    # whatever red pixels it contains.
+    from services.content_guard import check_eye_image
+
+    reason = check_eye_image(img_bgr)
+    if reason is not None:
+        return {"error": reason, "error_code": "invalid_eye_image"}
+
     if not _eye_model_loaded:
         return {"error": "Eye model not loaded"}
 
     try:
         from inference import predict_from_image
-
-        buf = np.frombuffer(image_bytes, dtype=np.uint8)
-        img_bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-
-        if img_bgr is None:
-            return {"error": "Gambar tidak valid / ROI konjungtiva tidak terdeteksi"}
 
         result = predict_from_image(img_bgr, gender)
         return result

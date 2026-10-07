@@ -5,6 +5,7 @@ __pycache__/
 # model / artifacts (dibangkitkan ulang dari data + core/)
 core/outputs/
 core/models/notebook_baseline/
+core/models/seg_runtime_backup_*/
 experiments/yolo/runs/
 experiments/yolo/verification/
 core/models/fullhand_model*.joblib

@@ -1,12 +1,23 @@
+from typing import Optional
+
 from fastapi import UploadFile, HTTPException
 from config.settings import ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES
 
 
-async def validate_image(file: UploadFile) -> None:
+def _detail(message: str, code: Optional[str]):
+    """A string detail stays a plain message; a code makes the frontend able
+    to route the failure (e.g. a bad nail photo opens the nail retry panel)."""
+    return {"code": code, "message": message} if code else message
+
+
+async def validate_image(file: UploadFile, code: Optional[str] = None) -> None:
     if not file.content_type or file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file type: {file.content_type}. Allowed: {', '.join(ALLOWED_MIME_TYPES)}",
+            detail=_detail(
+                f"Format file tidak didukung: {file.content_type}. Gunakan JPG, PNG, atau WEBP.",
+                code,
+            ),
         )
 
     filename = file.filename or ""
@@ -14,14 +25,22 @@ async def validate_image(file: UploadFile) -> None:
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid file extension: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}",
+            detail=_detail(
+                f"Ekstensi file tidak didukung: {ext or '(tanpa ekstensi)'}. "
+                f"Gunakan: {', '.join(sorted(ALLOWED_EXTENSIONS))}.",
+                code,
+            ),
         )
 
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB.",
+            detail=_detail(
+                f"Ukuran file terlalu besar. Maksimal "
+                f"{MAX_FILE_SIZE_BYTES // (1024 * 1024)} MB.",
+                code,
+            ),
         )
 
     file.file.seek(0)
@@ -34,7 +53,7 @@ async def validate_image(file: UploadFile) -> None:
     except Exception:
         raise HTTPException(
             status_code=400,
-            detail="The uploaded image appears to be corrupted. Please try a different image.",
+            detail=_detail("Gambar tampaknya rusak. Coba unggah gambar lain.", code),
         )
 
     file.file.seek(0)

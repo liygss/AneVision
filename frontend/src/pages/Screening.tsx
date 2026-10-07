@@ -31,7 +31,7 @@ import { slimPrediction } from "@/lib/utils";
 import NailArt from "@/components/NailArt";
 import BloodDropArt from "@/components/BloodDropArt";
 import NailBoxCrop, { type NailBox } from "@/components/NailBoxCrop";
-import { analyzeImages, BackendUnreachableError } from "@/services/api";
+import { analyzeImages, BackendUnreachableError, ApiRejectionError } from "@/services/api";
 import BackendNotice from "@/components/BackendNotice";
 import { useBackendStatus } from "@/hooks/useBackendStatus";
 import type { PredictionResult } from "@/types/prediction";
@@ -63,7 +63,15 @@ export default function Screening() {
   const [backendOffline, setBackendOffline] = useState(false);
 
   const activeStep = eyeFile ? 1 : 0;
-  const canAnalyze = eyeFile !== null && !loading;
+  // Analysis needs the API: firing it while the backend is known-down only
+  // produces a proxy error, so the button stays off until /health answers.
+  const canAnalyze =
+    eyeFile !== null && nailFile !== null && !loading && backend.state === "online";
+
+  // Set when a request failed on connectivity. Displayed as an offline notice
+  // only while the health probe has not recovered yet — derived during render,
+  // so a green probe clears it without needing an effect to write state.
+  const forcedOffline = backendOffline && backend.state !== "online";
 
   const totalImages = (eyeFile ? 1 : 0) + (nailFile ? 1 : 0);
 
@@ -80,27 +88,37 @@ export default function Screening() {
         { label: "Menghasilkan hasil skrining", icon: <FlaskConical className="w-4 h-4" /> },
       ];
 
+  // The running step can briefly exceed the list when the nail photo is
+  // removed mid-run (eye-only rerun), so the overlay renders a clamped index.
+  const shownStep = Math.min(loadingStep, loadingSteps.length - 1);
+
   const handleAnalyze = useCallback(
-    async (overrideBox?: NailBox) => {
+    async (overrideBox?: NailBox, options?: { eyeOnly?: boolean }) => {
       if (!eyeFile) return;
+      if (!nailFile && !options?.eyeOnly) return;
       setLoading(true);
       setError(null);
       setShowRetry(false);
 
       const box = overrideBox !== undefined ? overrideBox : nailBoxRef.current;
+      const nailToSend = options?.eyeOnly ? null : nailFile;
+      // Must match the loadingSteps array rendered for this run: the overlay
+      // re-renders from state (nailFile cleared on eyeOnly), so the interval
+      // can never step past the end of the displayed list.
+      const stepsCount = nailToSend ? 4 : 3;
 
       const startTime = Date.now();
       const MIN_LOADING_MS = 3000;
 
       let stepIndex = 0;
       const stepInterval = setInterval(() => {
-        stepIndex = (stepIndex + 1) % loadingSteps.length;
+        stepIndex = (stepIndex + 1) % stepsCount;
         setLoadingStep(stepIndex);
       }, 2000);
       setLoadingStep(0);
 
       try {
-        const result = await analyzeImages(eyeFile, nailFile, gender, box);
+        const result = await analyzeImages(eyeFile, nailToSend, gender, box);
 
         const elapsed = Date.now() - startTime;
         if (elapsed < MIN_LOADING_MS) {
@@ -140,6 +158,13 @@ export default function Screening() {
         if (err instanceof BackendUnreachableError) {
           setBackendOffline(true);
           setError(err.message);
+        } else if (err instanceof ApiRejectionError && err.code === "invalid_nail_image") {
+          // The backend rejected the nail photo (not a hand/nail, undetected,
+          // or unusable). Whole analysis is halted: offer the recovery panel
+          // instead of the generic error banner.
+          setPendingResult(null);
+          setRetryError(err.message);
+          setShowRetry(true);
         } else {
           setError(
             err.message || "Kami tidak dapat menganalisis gambar. Pastikan gambar jelas dan coba lagi."
@@ -149,7 +174,7 @@ export default function Screening() {
         setLoading(false);
       }
     },
-    [eyeFile, nailFile, gender, navigate, loadingSteps.length]
+    [eyeFile, nailFile, gender, navigate]
   );
 
   const handleRetry = useCallback(() => {
@@ -193,6 +218,15 @@ export default function Screening() {
   const handleEyeOnly = useCallback(() => {
     if (pendingResult) navigate("/results");
   }, [pendingResult, navigate]);
+
+  // Recovery after a hard rejection (HTTP 400): the nail photo itself is the
+  // problem, so it is removed explicitly and the screening reruns eye-only.
+  const handleDropNail = useCallback(() => {
+    handleNailRemove();
+    setRetryError(null);
+    setPendingResult(null);
+    handleAnalyze(undefined, { eyeOnly: true });
+  }, [handleNailRemove, handleAnalyze]);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -368,7 +402,7 @@ export default function Screening() {
                 {
                   num: 2,
                   label: "Unggah Kuku",
-                  desc: "Opsional, foto kuku",
+                  desc: "Wajib, foto kuku",
                   icon: <NailIcon />,
                   done: !!nailFile,
                 },
@@ -527,9 +561,11 @@ export default function Screening() {
               <div>
                 <h3 className="text-sm font-bold text-navy-800">Unggah Gambar</h3>
                 <p className="text-[11px] text-navy-500">
-                  {totalImages === 0 && "Unggah gambar mata untuk memulai skrining"}
-                  {totalImages === 1 && eyeFile ? "Gambar mata siap — kuku opsional, bisa langsung analisis" : "1 gambar siap, tambah gambar kuku untuk hasil lebih akurat"}
-                  {totalImages === 2 && "Kedua gambar siap untuk dianalisis. Kuku opsional, bukan wajib."}
+                  {totalImages === 0 && "Unggah gambar mata dan foto kuku untuk memulai skrining"}
+                  {totalImages === 1 && eyeFile
+                    ? "Gambar mata siap — mohon masukkan gambar kuku dahulu"
+                    : "1 gambar siap, tambah gambar mata untuk melanjutkan"}
+                  {totalImages === 2 && "Kedua gambar siap untuk dianalisis."}
                 </p>
               </div>
               {totalImages > 0 && (
@@ -560,7 +596,7 @@ export default function Screening() {
               <div className="relative">
                 <div className="absolute top-3 right-3 z-10">
                   <span className="text-[10px] font-bold text-primary-600 bg-primary-50 border border-primary-200 px-2 py-0.5 rounded-full">
-                    Opsional
+                    Wajib
                   </span>
                 </div>
                 <UploadCard
@@ -577,7 +613,7 @@ export default function Screening() {
         </motion.div>
 
         {/* ============ BACKEND STATUS ============ */}
-        {backendOffline ? (
+        {forcedOffline ? (
           <BackendNotice status={{ ...backend, state: "offline" }} />
         ) : (
           <BackendNotice status={backend} />
@@ -591,14 +627,14 @@ export default function Screening() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4 }}
               className={
-                backendOffline
+                forcedOffline
                   ? "bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
                   : "bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
               }
             >
               <AlertCircle
                 className={
-                  backendOffline
+                  forcedOffline
                     ? "w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
                     : "w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
                 }
@@ -606,12 +642,12 @@ export default function Screening() {
               <div>
                 <p
                   className={
-                    backendOffline ? "text-sm font-bold text-amber-800" : "text-sm font-bold text-red-800"
+                    forcedOffline ? "text-sm font-bold text-amber-800" : "text-sm font-bold text-red-800"
                   }
                 >
-                  {backendOffline ? "Server tidak dapat dihubungi" : "Analisis Gagal"}
+                  {forcedOffline ? "Server tidak dapat dihubungi" : "Analisis Gagal"}
                 </p>
-                <p className={backendOffline ? "text-sm text-amber-700 mt-1" : "text-sm text-red-600 mt-1"}>
+                <p className={forcedOffline ? "text-sm text-amber-700 mt-1" : "text-sm text-red-600 mt-1"}>
                   {error}
                 </p>
               </div>
@@ -633,7 +669,9 @@ export default function Screening() {
                   <Hand className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-amber-800">Foto kuku perlu diperjelas</p>
+                  <p className="text-sm font-bold text-amber-800">
+                    {pendingResult ? "Foto kuku perlu diperjelas" : "Foto kuku ditolak"}
+                  </p>
                   <p className="text-sm text-amber-700 mt-1">{retryError}</p>
                   <div className="text-xs text-amber-600 mt-2 space-y-1">
                     <p className="font-semibold">Tips foto kuku yang baik:</p>
@@ -655,12 +693,21 @@ export default function Screening() {
                   <Crosshair className="w-4 h-4" />
                   Tandai area kuku
                 </button>
-                <button
-                  onClick={handleEyeOnly}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-navy-600 bg-white border border-navy-200 hover:bg-navy-50 transition-base"
-                >
-                  Lihat hasil mata saja
-                </button>
+                {pendingResult ? (
+                  <button
+                    onClick={handleEyeOnly}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-navy-600 bg-white border border-navy-200 hover:bg-navy-50 transition-base"
+                  >
+                    Lihat hasil mata saja
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleDropNail}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-navy-600 bg-white border border-navy-200 hover:bg-navy-50 transition-base"
+                  >
+                    Hapus foto kuku & lanjut
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -711,16 +758,33 @@ export default function Screening() {
                   className="text-xs text-primary-600 mt-3 flex items-center justify-center gap-1.5"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  {totalImages === 1
-                    ? "Gambar mata siap dianalisis"
-                    : "Kedua gambar siap dianalisis"}
+                  Kedua gambar siap dianalisis
                   {nailBox && " (area kuku sudah ditandai)"}
                 </motion.p>
               )}
 
-              {!canAnalyze && !loading && (
+              {!canAnalyze && !loading && !eyeFile && (
                 <p className="text-xs text-navy-500 mt-2">
                   Unggah gambar mata untuk mengaktifkan tombol analisis
+                </p>
+              )}
+
+              {!canAnalyze && !loading && eyeFile && !nailFile && (
+                <motion.p
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs font-semibold text-amber-600 mt-2 flex items-center justify-center gap-1.5"
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Mohon masukkan gambar kuku dahulu
+                </motion.p>
+              )}
+
+              {!canAnalyze && !loading && eyeFile && backend.state !== "online" && (
+                <p className="text-xs text-navy-500 mt-2">
+                  {backend.state === "offline"
+                    ? "Server analisis belum tersedia. Tekan 'Coba lagi' pada notifikasi di atas, lalu ulangi."
+                    : "Menunggu server analisis merespons, tunggu sebentar…"}
                 </p>
               )}
             </div>
@@ -841,7 +905,7 @@ export default function Screening() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-center text-sm font-bold text-navy-800 mb-6"
                 >
-                  {loadingSteps[loadingStep].label}...
+                  {loadingSteps[shownStep].label}...
                 </motion.p>
 
                 {/* Steps */}
@@ -850,14 +914,14 @@ export default function Screening() {
                     <motion.div
                       key={i}
                       className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-smooth ${
-                        i === loadingStep
+                        i === shownStep
                           ? "bg-primary-50 text-primary-700 border border-primary-100"
-                          : i < loadingStep
+                          : i < shownStep
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
                             : "text-navy-300 border border-transparent"
                       }`}
                     >
-                      {i < loadingStep ? (
+                      {i < shownStep ? (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
@@ -865,7 +929,7 @@ export default function Screening() {
                         >
                           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         </motion.div>
-                      ) : i === loadingStep ? (
+                      ) : i === shownStep ? (
                         <Loader2 className="w-4 h-4 animate-spin text-primary-600" />
                       ) : (
                         <div className="w-4 h-4 rounded-full border-2 border-navy-200" />
@@ -881,7 +945,7 @@ export default function Screening() {
                   <motion.div
                     className="h-full bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 rounded-full"
                     animate={{
-                      width: `${((loadingStep + 1) / loadingSteps.length) * 100}%`,
+                      width: `${((shownStep + 1) / loadingSteps.length) * 100}%`,
                     }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
                   />

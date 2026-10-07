@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Camera, ImageIcon, Check, Eye, Hand } from "lucide-react";
+import { X, Camera, ImageIcon, Check, Eye, Hand, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EyeArt from "./EyeArt";
 import NailArt from "./NailArt";
@@ -15,6 +15,8 @@ interface UploadCardProps {
 }
 
 const ACCEPTED = "image/jpeg,image/png,image/webp";
+const ACCEPTED_TYPES = ACCEPTED.split(",");
+const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 
 export default function UploadCard({
   title,
@@ -28,10 +30,19 @@ export default function UploadCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
 
   const handleFile = useCallback(
     (f: File) => {
-      if (!f.type.startsWith("image/")) return;
+      if (!ACCEPTED_TYPES.includes(f.type)) {
+        setSelectError("Format file tidak didukung. Gunakan JPG, PNG, atau WEBP.");
+        return;
+      }
+      if (f.size > MAX_SIZE_BYTES) {
+        setSelectError("Ukuran gambar melebihi 10 MB. Pilih gambar yang lebih kecil.");
+        return;
+      }
+      setSelectError(null);
       onFileSelect(f);
       const url = URL.createObjectURL(f);
       setPreview(url);
@@ -52,6 +63,8 @@ export default function UploadCard({
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const f = e.target.files?.[0];
+      // reset so picking the same file again still fires change
+      e.target.value = "";
       if (f) handleFile(f);
     },
     [handleFile]
@@ -60,7 +73,9 @@ export default function UploadCard({
   const handleRemove = useCallback(() => {
     onFileRemove();
     setPreview(null);
+    setSelectError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   }, [onFileRemove]);
 
   return (
@@ -241,6 +256,17 @@ export default function UploadCard({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {selectError && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"
+          >
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>{selectError}</span>
+          </motion.div>
+        )}
 
         <input ref={fileInputRef} type="file" accept={ACCEPTED} onChange={handleChange} className="hidden" />
         <input ref={cameraInputRef} type="file" accept={ACCEPTED} capture="environment" onChange={handleChange} className="hidden" />
