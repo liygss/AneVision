@@ -73,7 +73,10 @@ def load_nail_model() -> bool:
         print(f"[Kuku-Anemia] .venv_nail not found at {_VENV_NAIL_PY}; "
               "falling back to in-process import. Run: python3 -m venv .venv_nail "
               "&& .venv_nail/bin/pip install -r requirements_nail.txt")
-        return _load_inprocess_worker() is not None
+        res = _load_inprocess_worker()
+        if not res:
+            print("[Kuku-Anemia] In-process fallback failed; check worker logs")
+        return res is not None
 
     try:
         _stderr = open("/tmp/nail_worker_stderr.log", "a")
@@ -92,11 +95,17 @@ def load_nail_model() -> bool:
             return True
         print(f"[Kuku-Anemia] Nail worker ping failed: {out}")
         _shutdown()
-        return _load_inprocess_worker() is not None
+        res = _load_inprocess_worker()
+        if not res:
+            print("[Kuku-Anemia] In-process fallback failed after ping fail")
+        return res is not None
     except Exception as e:
         print(f"[Kuku-Anemia] Failed to start nail worker: {e}")
         _shutdown()
-        return _load_inprocess_worker() is not None
+        res = _load_inprocess_worker()
+        if not res:
+            print("[Kuku-Anemia] In-process fallback failed after exception")
+        return res is not None
 
 
 def _request(payload: dict) -> Optional[dict]:
