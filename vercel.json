@@ -20,7 +20,9 @@
                         "models/Kuku-Anemia/experiments/yolo26_seg/runs/seg26/weights/best.pt",
                         "models/Kuku-Anemia/experiments/yolo26_seg/runs/seg26/weights/last.pt",
                         "models/Kuku-Anemia/core/assets/hand_landmarker.task",
-                        "models/Kuku-Anemia/core/models/**"
+                        "models/Kuku-Anemia/core/models/**",
+                        "models/Kuku-Anemia/**",
+                        "models/Kuku-Anemia/experiments/**"
                     ]
                 }
             },
