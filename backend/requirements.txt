@@ -18,3 +18,7 @@ onnxruntime
 # See requirements_nail.txt. Both venvs are created by start.sh; on Vercel the
 # Python runtime is a single process, so the nail path is imported in-process
 # there instead (see services/nail.py).
+ultralytics
+mediapipe==0.10.21
+torch
+torchvision
