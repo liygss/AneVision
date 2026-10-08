@@ -1,0 +1,27 @@
+# Backend lives on Railway — never bundle it into Vercel
+backend/
+
+# Local/deps (Vercel CLI otherwise uploads the whole repo)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.vite/
+*.tsbuildinfo
+.venv/
+.venv_nail/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Local tooling & JS clutter
+.vercel/
+.opencode/
+*.log
+*.tsbuildinfo
+render.yaml
+start.sh
+start_backend.sh
+start-ngrok.sh
