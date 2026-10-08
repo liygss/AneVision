@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
-import { Eye, ScanSearch, HeartPulse } from "lucide-react";
+import { Eye, ScanSearch, HeartPulse, TrendingUp, ShieldCheck } from "lucide-react";
 
 interface PhotoCardProps {
   src: string;
@@ -77,9 +77,24 @@ function PhotoCard({
 
 export default function HeroPhotoGrid() {
   return (
-    <div className="relative w-full h-[420px] sm:h-[480px] md:h-[520px]">
+    <div className="relative w-full h-[440px] sm:h-[500px] md:h-[540px]">
       {/* Ambient glow */}
-      <div className="absolute -inset-6 sm:-inset-8 bg-gradient-to-tr from-primary-200/25 via-primary-100/15 to-primary-50/25 rounded-[2.5rem] blur-2xl pointer-events-none" />
+      <div className="absolute -inset-8 sm:-inset-12 bg-gradient-to-tr from-primary-200/30 via-primary-100/20 to-cyan-200/25 rounded-[3rem] blur-2xl pointer-events-none" />
+
+      {/* Decorative conic ring */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.85, rotate: -8 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          transition={{ duration: 1.2, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[105%] aspect-square rounded-full border border-primary-200/60"
+          style={{
+            background:
+              "conic-gradient(from 0deg, rgba(8,145,178,0.10), rgba(34,211,238,0.05), rgba(8,145,178,0.10), rgba(34,211,238,0.05), rgba(8,145,178,0.10))",
+          }}
+        />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] aspect-square rounded-full border border-dashed border-primary-300/30 animate-spin-slow" />
+      </div>
 
       <PhotoCard
         src="/image/eye-exam.jpg"
@@ -131,15 +146,56 @@ export default function HeroPhotoGrid() {
         delay={0.5}
       />
 
+      {/* Floating metric chip: Hb result */}
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute top-14 right-1 sm:right-3 z-40 animate-float-delay"
+      >
+        <div className="glass-strong rounded-2xl border border-white/70 shadow-lg shadow-navy-900/15 p-3 min-w-[132px]">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-navy-500">Est. Hemoglobin</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <span className="text-lg font-extrabold text-navy-900 tabular-nums">13.2</span>
+            <span className="text-[10px] font-bold text-navy-400">g/dL</span>
+          </div>
+          <span className="inline-flex mt-1 items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50/80 border border-emerald-200/70 rounded-full px-1.5 py-0.5">
+            Risk: Normal
+          </span>
+        </div>
+      </motion.div>
+
+      {/* Floating metric chip: status */}
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, delay: 1.05, ease: [0.22, 1, 0.36, 1] }}
+        className="absolute top-1/2 -left-2 sm:left-2 z-40 animate-float"
+      >
+        <div className="glass-strong rounded-full border border-white/70 shadow-lg shadow-navy-900/15 pl-2 pr-3 py-1.5 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-emerald-500/15 border border-emerald-300/60 flex items-center justify-center text-emerald-600">
+            <ShieldCheck className="w-3.5 h-3.5" />
+          </span>
+          <div>
+            <p className="text-[10px] font-bold text-navy-800 leading-tight">AI Menganalisis</p>
+            <p className="text-[9px] text-navy-500 leading-tight">2 model · <span className="font-bold text-emerald-600">aktif</span></p>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Floating badge */}
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, delay: 0.9 }}
-        className="absolute -bottom-2 sm:bottom-0 left-1/2 -translate-x-1/2 z-40"
+        className="absolute -bottom-2 sm:bottom-2 left-1/2 -translate-x-1/2 z-40"
       >
         <div className="glass-strong rounded-full border border-white/70 shadow-lg shadow-navy-900/10 px-4 py-1.5 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          </span>
           <p className="text-[10px] sm:text-xs font-bold text-navy-800">Skrining Non-Invasif</p>
         </div>
       </motion.div>

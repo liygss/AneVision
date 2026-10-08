@@ -134,6 +134,11 @@
   100% { transform: translate(0, 0) scale(1); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes aurora-2 {
   0% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(-40px, 20px) scale(1.15); }
@@ -200,6 +205,7 @@
 .animate-aurora { animation: aurora 8s ease-in-out infinite; }
 .animate-aurora-2 { animation: aurora-2 10s ease-in-out infinite; }
 .animate-count-glow { animation: count-glow 3s ease-in-out infinite; }
+.animate-spin-slow { animation: spin 26s linear infinite; }
 .animate-fade-in-up { animation: fade-in-up 0.4s ease-out both; }
 .animate-scale-in { animation: scale-in 0.3s ease-out both; }
 .animate-slide-in-bottom { animation: slide-in-bottom 0.4s ease-out both; }
@@ -237,6 +243,15 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.text-gradient-strong {
+  background: linear-gradient(120deg, #0e7490 0%, #0891b2 40%, #06b6d4 70%, #22d3ee 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 6s ease infinite;
 }
 
 /* ============ HOVER UNDERLINE LINK ============ */

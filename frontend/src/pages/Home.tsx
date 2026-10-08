@@ -160,7 +160,7 @@ export default function Home() {
                 Skrining Non-Invasif Berbasis AI
               </motion.div>
 
-              <h1 className="text-[2.5rem] sm:text-6xl lg:text-[3.75rem] font-extrabold text-navy-900 tracking-[-0.03em] leading-[1.02] text-balance mb-7">
+              <h1 className="text-[2.75rem] sm:text-6xl lg:text-[4rem] font-extrabold text-navy-900 tracking-[-0.03em] leading-[1.02] text-balance mb-7">
                 <span className="block">
                   {headlineWords.map((word, i) => (
                     <span key={word.text}>
@@ -184,12 +184,30 @@ export default function Home() {
                 </span>
                 <span className="block overflow-hidden pb-1">
                   <motion.span
-                    className="inline-block"
+                    className="relative inline-block text-gradient-strong"
                     initial={reduceMotion ? false : { y: "110%" }}
                     animate={{ y: 0 }}
                     transition={{ duration: 0.7, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
                   >
                     dari Mata &amp; Kuku
+                    {/* Underline swash */}
+                    <svg
+                      className="absolute -bottom-2 left-0 w-full h-3 text-primary-300/70"
+                      viewBox="0 0 300 12"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <motion.path
+                        d="M3 9 C 60 2, 180 2, 297 9"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 0.7, delay: 0.6, ease: "easeOut" }}
+                      />
+                    </svg>
                   </motion.span>
                 </span>
               </h1>
@@ -262,6 +280,19 @@ export default function Home() {
             </motion.div>
           </div>
         </div>
+
+        {/* Curved bottom wave */}
+        <svg
+          className="absolute -bottom-px left-0 right-0 w-full text-white pointer-events-none"
+          viewBox="0 0 1440 60"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M0 60 L0 30 C 240 0, 480 0, 720 18 C 960 36, 1200 40, 1440 18 L 1440 60 Z"
+            fill="currentColor"
+          />
+        </svg>
       </section>
 
       {/* ============ STATS STRIP ============ */}
