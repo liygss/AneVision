@@ -18,6 +18,13 @@ models/**/weights
 models/**/*.csv
 models/**/*.cache
 
+# Runtime files that MUST ship despite the broad exclusions above:
+# (a) seg26 weights for the YOLO nail detector (best.pt moved out of
+#     experiments/ into core/models/seg_runtime by the deploy setup),
+# (b) seg26 feature bounds CSV used by core/guard.py.
+!models/Kuku-Anemia/core/models/seg_runtime/yolo26_seg_best.pt
+!models/Kuku-Anemia/core/outputs/features_seg26_seg26_auto.csv
+
 # AINailSys ONNX is optional (guarded by try/except in services/nail_worker.py)
 models/AINailSys/models/deployment/*.onnx
 models/AINailSys/models/deployment/*.onnx.data

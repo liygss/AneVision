@@ -37,7 +37,8 @@ RUN python -m venv .venv_nail \
 COPY . .
 
 ENV MODEL_MODE=auto \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    ANEVIA_SEG26_WEIGHTS=/app/models/Kuku-Anemia/core/models/seg_runtime/yolo26_seg_best.pt
 
 # Render injects PORT (default 10000); uvicorn binds to it on 0.0.0.0.
 EXPOSE 10000
