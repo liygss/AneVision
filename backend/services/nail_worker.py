@@ -57,7 +57,7 @@ def _load():
     except Exception as _e:
         HandLandmarkExtractor = None
         print(f"[nail_worker] HandLandmarkExtractor import failed: {_e}", file=sys.stderr)
-    from core.seg_detector import Yolo26SegDetector
+    from core.seg_detector import Yolo26SegDetector as _Yolo26SegDetector
 
     # Utama: CNN ResNet18 (ONNX) — pengganti ElasticNet sesuai domain sewa
     # (export_cnn_onnx.py). Fallback: ElasticNet seg_runtime bila ONNX tidak
@@ -92,9 +92,16 @@ def _load():
         print(f"[nail_worker] HandLandmarkExtractor init failed: {_e}", file=sys.stderr)
     # YOLO26-seg detector: two-pass runtime (conf 0.30 @ 640 -> fallback 0.10 @ 1280),
     # per-pixel nail masks + layout skin box (2.3x nail width) = GitHub canonical.
-    _seg_detector = Yolo26SegDetector(
-        device="cpu", conf=0.30, imgsz=640, fallback=True,
-    )
+    try:
+        _seg_detector = _Yolo26SegDetector(
+            device="cpu", conf=0.30, imgsz=640, fallback=True,
+        )
+    except Exception as _seg_exc:
+        # seg26 (ultralytics/torch) is heavy and can crash on low-memory hosts.
+        # Without it we still work via mediapipe-only / auto-plate detection.
+        _seg_detector = None
+        print(f"[nail_worker] seg26 detector unavailable ({_seg_exc}); "
+              "using mediapipe/auto detection", file=sys.stderr)
 
     # Load enhanced model (with AINailSys feature) if available
     enhanced_dir = cfg.MODELS_DIR / "ainailsys_enhanced"
