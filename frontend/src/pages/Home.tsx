@@ -215,11 +215,11 @@ export default function Home() {
                 variants={fadeUp}
                 className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-6"
               >
-                <Link to="/screening" className={buttonStyles("primary")}>
+                <Link to="/screening" className={buttonStyles("primary", "lg")}>
                   Mulai Skrining
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </Link>
-                <a href="#cara-kerja" className={buttonStyles("secondary")}>
+                <a href="#cara-kerja" className={buttonStyles("secondary", "lg")}>
                   Cara Kerja
                 </a>
               </motion.div>
@@ -577,18 +577,18 @@ export default function Home() {
                   ].map((s, i) => (
                     <div
                       key={i}
-                      className="relative group flex flex-col gap-3 p-5 rounded-xl bg-white/[0.06] border border-white/10 transition-smooth hover:-translate-y-0.5 hover:border-primary-400/30 hover:bg-white/[0.09] hover:shadow-lg hover:shadow-primary-500/10"
+                      className="relative group flex flex-col gap-4 p-6 md:p-7 rounded-2xl bg-white/[0.06] border border-white/10 transition-smooth hover:-translate-y-1 hover:border-primary-400/30 hover:bg-white/[0.09] hover:shadow-xl hover:shadow-primary-500/10"
                     >
                       <div className="card-glow-corner" />
-                      <div className="flex items-center gap-2.5">
-                        <span className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary-500/15 border border-primary-500/25 text-primary-200 group-hover:bg-primary-500/25 transition-smooth">
+                      <div className="flex items-center gap-3">
+                        <span className="relative flex items-center justify-center w-12 h-12 rounded-xl bg-primary-500/15 border border-primary-500/25 text-primary-200 group-hover:bg-primary-500/25 transition-smooth">
                           {s.icon}
                         </span>
-                        <p className="text-sm font-bold text-white">{s.title}</p>
+                        <p className="text-base md:text-lg font-bold text-white">{s.title}</p>
                       </div>
-                      <p className="text-xs text-navy-300 leading-relaxed">{s.desc}</p>
-                      <span className="mt-auto inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-500/15 border border-primary-500/25 text-[11px] font-bold text-primary-200">
-                        <span className="w-1 h-1 rounded-full bg-primary-300 animate-pulse" />
+                      <p className="text-sm text-navy-300 leading-relaxed">{s.desc}</p>
+                      <span className="mt-auto inline-flex w-fit items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary-500/15 border border-primary-500/25 text-xs font-bold text-primary-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-300 animate-pulse" />
                         {s.metric}
                       </span>
                     </div>

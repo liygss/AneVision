@@ -6,23 +6,34 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 const BUTTON_BASE =
-  "group inline-flex items-center justify-center gap-2 rounded-xl font-bold text-sm transition-smooth active:scale-[0.98] hover:-translate-y-0.5"
+  "group inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-smooth active:scale-[0.98] hover:-translate-y-0.5"
 
-export function buttonStyles(variant: "primary" | "secondary" | "light" = "primary") {
+const BUTTON_SIZE = {
+  md: "px-5 py-2.5 text-sm",
+  lg: "px-8 py-4 text-base rounded-2xl shadow-lg",
+}
+
+export function buttonStyles(
+  variant: "primary" | "secondary" | "light" = "primary",
+  size: "md" | "lg" = "md",
+) {
   if (variant === "secondary") {
     return cn(
       BUTTON_BASE,
+      BUTTON_SIZE[size],
       "w-full sm:w-auto bg-white text-navy-700 border border-navy-200 hover:border-primary-300 hover:bg-primary-50/40 hover:text-navy-900",
     )
   }
   if (variant === "light") {
     return cn(
       BUTTON_BASE,
+      BUTTON_SIZE[size],
       "sheen w-full sm:w-auto bg-white text-primary-700 shadow-lg shadow-navy-950/20 hover:bg-primary-50 hover:shadow-xl",
     )
   }
   return cn(
     BUTTON_BASE,
+    BUTTON_SIZE[size],
     "sheen w-full sm:w-auto bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-600/25 hover:from-primary-700 hover:to-primary-800 hover:shadow-xl",
   )
 }
