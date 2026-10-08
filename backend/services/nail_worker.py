@@ -250,18 +250,19 @@ def _find_finger(img_rgb, nail_box=None):
             return items, middle, hand_score, "seg26", None
 
     # 3) MediaPipe full hand
-    landmarks, hand_score = _hand_landmarker.detect_ranked(img_rgb)
-    if landmarks is not None:
-        nail_skin_boxes = derive_all_boxes(landmarks, w, h, HandGeometry())
-        if nail_skin_boxes:
-            fingers = [
-                DetectedFinger(nsb.finger_id, nsb.nail_box, nsb.skin_box, hand_score, "mediapipe")
-                for nsb in nail_skin_boxes
-            ]
-            ordered = sorted(fingers, key=lambda d: (d.nail_box[0] + d.nail_box[2]) / 2)
-            middle = ordered[len(ordered) // 2]
-            items = [(f, None, None) for f in ordered]
-            return items, middle, hand_score, "mediapipe", None
+    if _hand_landmarker is not None:
+        landmarks, hand_score = _hand_landmarker.detect_ranked(img_rgb)
+        if landmarks is not None:
+            nail_skin_boxes = derive_all_boxes(landmarks, w, h, HandGeometry())
+            if nail_skin_boxes:
+                fingers = [
+                    DetectedFinger(nsb.finger_id, nsb.nail_box, nsb.skin_box, hand_score, "mediapipe")
+                    for nsb in nail_skin_boxes
+                ]
+                ordered = sorted(fingers, key=lambda d: (d.nail_box[0] + d.nail_box[2]) / 2)
+                middle = ordered[len(ordered) // 2]
+                items = [(f, None, None) for f in ordered]
+                return items, middle, hand_score, "mediapipe", None
 
     # 4) Automatic nail-plate detection (no full hand needed)
     finger = _auto_plate_finger(img_rgb)
