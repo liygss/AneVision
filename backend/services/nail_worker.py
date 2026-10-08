@@ -544,7 +544,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
         "nail_condition": ainailsys_label,
         "nail_condition_detail": ainailsys_stage2,
         "nail_condition_confidence": round(ainailsys_confidence, 4),
-        "heatmap": _draw_nail_attention(img_rgb, items, middle),
+        "heatmap": _draw_box_overlay(img_rgb, items, middle),
     }
 
 
@@ -618,91 +618,38 @@ def _guard_nail(img_rgb, middle, hb_raw, n_instances,
         return ok, "" if ok else "guard_fallback"
 
 
-def _draw_nail_attention(img_rgb, items, middle):
-    """Real attention-style heatmap over the nail plates (mirrors the eye).
+def _draw_box_overlay(img_rgb, items, middle):
+    """GitHub run_seg_pipeline draw_overlay: nail mask fill + nail boxes only.
 
-    Region: seg26 per-pixel nail masks when available, else a plate mask
-    refined via ``core.masking.best_nail_mask`` inside each nail box, else the
-    box itself. Attention score = (LAB a-ch * HSV saturation) on nail pixels —
-    the same redness/saturation signal the eye heatmap uses — so the "focus"
-    tracks where color matters for the Hb estimate. JET colormap overlaid only
-    on nail regions, background darkened, boxes retained for orientation.
-    Returns PNG base64 (max 640px) or None.
+    All fingers: green mask fill (0,255,0) follows each nail's real shape
+    (seg26) at 40% tint. Nail boxes green — brighter for the middle finger —
+    with N{i} conf. No skin boxes / skin fill (avoids purple blend).
+    Legacy detections without masks: boxes only. Returns PNG base64 (max 640).
     """
     import base64 as b64
     import cv2
 
     h, w = img_rgb.shape[:2]
-
-    # 1) Per-finger nail region masks (full-frame bool)
-    plate_masks = []
-    for f, nm, _sm in items:
-        if nm is not None:
-            plate_masks.append((f, (nm > 0).astype(np.uint8)))
-            continue
-        t, l, b, r = _clamp_box(f.nail_box, h, w)
-        if t is None:
-            continue
-        mask = np.zeros((h, w), dtype=np.uint8)
-        mask[t:b, l:r] = 1
-        try:
-            from core.masking import best_nail_mask
-            crop = img_rgb[t:b, l:r]
-            refined = best_nail_mask(crop, method="auto")
-            if refined is not None and (refined > 0).mean() > 0.15:
-                mask[t:b, l:r] = (refined > 0).astype(np.uint8)
-        except Exception:
-            pass
-        plate_masks.append((f, mask))
-
-    if not plate_masks:
-        return None
-
-    union = np.zeros((h, w), dtype=bool)
-    for _, mask in plate_masks:
-        union |= mask > 0
-
-    # 2) Attention score on nail pixels only (a-ch * saturation)
-    lab = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2LAB)
-    hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
-    a_ch = lab[:, :, 1].astype(np.float32)
-    s_ch = hsv[:, :, 1].astype(np.float32)
-    score = np.zeros((h, w), dtype=np.float32)
-    for _f, mask in plate_masks:
-        px = mask > 0
-        if px.sum() == 0:
-            continue
-        amin = float(a_ch[px].min())
-        sc = np.zeros((h, w), dtype=np.float32)
-        sc[px] = (a_ch[px] - amin) * s_ch[px]
-        score = np.maximum(score, sc)
-
-    score = cv2.GaussianBlur(score, (15, 15), 0)
-    s_min, s_max = float(score[union].min()), float(score[union].max())
-    if not np.isfinite(s_max) or s_max <= s_min:
-        return None
-    attn = ((score - s_min) / (s_max - s_min) * 255.0).astype(np.uint8)
-
-    heatmap_bgr = cv2.applyColorMap(attn, cv2.COLORMAP_JET)
-    heatmap_rgb = cv2.cvtColor(heatmap_bgr, cv2.COLOR_BGR2RGB)
-
-    base = np.zeros_like(img_rgb)
-    base[union] = (img_rgb[union] * 0.45).astype(np.uint8)
-    overlay = cv2.addWeighted(
-        img_rgb, 0.40, heatmap_rgb, 0.60, 0)
-    base[union] = overlay[union]
-
-    # 3) Downscale to max 640 like before
-    out = base
+    base = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+    max_side = 640.0
     scale = 1.0
-    out_h, out_w = h, w
-    if max(h, w) > 640.0:
-        scale = 640.0 / max(h, w)
-        out = cv2.resize(base, (int(round(w * scale)), int(round(h * scale))),
-                         interpolation=cv2.INTER_LINEAR)
-        out_h, out_w = out.shape[:2]
+    if max(h, w) > max_side:
+        scale = max_side / max(h, w)
+        base = cv2.resize(base, (int(round(w * scale)), int(round(h * scale))),
+                          interpolation=cv2.INTER_LINEAR)
+    Hs, Ws = base.shape[:2]
 
-    # 4) Nail boxes (brighter for the middle finger) + confidence labels
+    # Mask tint following each nail's real shape (all fingers, seg26 only)
+    if any(nm is not None for _, nm, _ in items):
+        overlay = np.zeros_like(base)
+        for _, nm, _ in items:
+            if nm is None:
+                continue
+            nm_s = cv2.resize((nm > 0).astype(np.uint8), (Ws, Hs),
+                              interpolation=cv2.INTER_NEAREST)
+            overlay[nm_s > 0] = (0, 255, 0)
+        base = cv2.addWeighted(base, 0.85, overlay, 0.4, 0)
+
     def _rect(box):
         clipped = _clamp_box(box, h, w)
         if clipped is None:
@@ -710,18 +657,18 @@ def _draw_nail_attention(img_rgb, items, middle):
         t, l, b, r = clipped
         return (int(l * scale), int(t * scale), int(r * scale), int(b * scale))
 
-    for i, (f, _m) in enumerate(plate_masks):
+    for i, (f, _, _) in enumerate(items):
         nr = _rect(f.nail_box)
         if nr is None:
             continue
         is_mid = f is middle
-        color = (0, 220, 0) if is_mid else (0, 130, 0)
-        cv2.rectangle(out, (nr[0], nr[1]), (nr[2], nr[3]), color,
+        color = (0, 220, 0) if is_mid else (0, 120, 0)
+        cv2.rectangle(base, (nr[0], nr[1]), (nr[2], nr[3]), color,
                       3 if is_mid else 2)
-        cv2.putText(out, f"N{i + 1} {f.confidence:.2f}", (nr[0], max(nr[1] - 4, 14)),
+        cv2.putText(base, f"N{i + 1} {f.confidence:.2f}", (nr[0], max(nr[1] - 4, 14)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
 
-    ok, buf = cv2.imencode(".png", out)
+    ok, buf = cv2.imencode(".png", base)
     if not ok:
         return None
     return b64.b64encode(buf.tobytes()).decode("ascii")
