@@ -11,6 +11,24 @@ import BloodDropArt from "@/components/BloodDropArt";
 import AnemiaRecommendation from "@/components/AnemiaRecommendation";
 import type { PredictionResult } from "@/types/prediction";
 
+const NAIL_DETECTION_LABELS: Record<string, string> = {
+  seg26: "YOLO26-seg",
+  mediapipe: "MediaPipe",
+  auto: "Auto",
+  manual: "Manual",
+  none: "—",
+};
+
+function nailDetectionLabel(nail: PredictionResult["nail"] | undefined): string {
+  const raw = nail?.source?.toLowerCase() ?? "";
+  const key = raw
+    .replace("kuku-anemia_", "")
+    .replace("/kuku-anemia_", "")
+    .split("+")[0]
+    .trim();
+  return NAIL_DETECTION_LABELS[key] || key || "—";
+}
+
 export default function Results() {
   const navigate = useNavigate();
   const [result] = useState<PredictionResult | null>(() => {
@@ -446,7 +464,7 @@ export default function Results() {
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Threshold: ≥ {result.nail!.threshold_used}</span>
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">MAE: ±{result.nail!.mae} g/dL</span>
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">R²: 0.312</span>
-                    <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Deteksi: seg26 · conf {(result.nail!.hand_confidence || 0).toFixed(2)}</span>
+                    <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Deteksi: {nailDetectionLabel(result.nail)} · conf {(result.nail!.hand_confidence || 0).toFixed(2)}</span>
                     {result.nail!.nail_count != null && result.nail!.nail_count! > 1 && (
                       <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">{result.nail!.nail_count} kuku (median)</span>
                     )}
