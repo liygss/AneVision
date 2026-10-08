@@ -125,6 +125,19 @@ export default function Home() {
               "radial-gradient(ellipse at center, rgba(8,145,178,0.10) 0%, rgba(8,145,178,0.04) 38%, transparent 68%)",
           }}
         />
+        {/* Aurora blobs */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-primary-400/15 blur-3xl animate-aurora" />
+        <div className="pointer-events-none absolute top-10 right-[-120px] w-[460px] h-[460px] rounded-full bg-cyan-300/20 blur-3xl animate-aurora-2" />
+        <div className="pointer-events-none absolute bottom-[-140px] left-1/3 w-[380px] h-[380px] rounded-full bg-primary-200/20 blur-3xl animate-aurora" style={{ animationDelay: "3s" }} />
+        {/* Drifting particles */}
+        <div className="pointer-events-none absolute inset-0">
+          <span className="absolute left-[12%] top-[30%] w-1 h-1 rounded-full bg-primary-400/60 animate-particle-drift" />
+          <span className="absolute left-[22%] top-[62%] w-1.5 h-1.5 rounded-full bg-cyan-400/50 animate-particle-drift" style={{ animationDelay: "1.6s" }} />
+          <span className="absolute left-[78%] top-[24%] w-1 h-1 rounded-full bg-primary-300/60 animate-particle-drift" style={{ animationDelay: "2.4s" }} />
+          <span className="absolute left-[86%] top-[58%] w-1.5 h-1.5 rounded-full bg-cyan-400/40 animate-particle-drift" style={{ animationDelay: "3.4s" }} />
+          <span className="absolute left-[64%] top-[78%] w-1 h-1 rounded-full bg-primary-400/50 animate-particle-drift" style={{ animationDelay: "0.8s" }} />
+          <span className="absolute left-[40%] top-[18%] w-1 h-1 rounded-full bg-cyan-300/50 animate-particle-drift" style={{ animationDelay: "4.2s" }} />
+        </div>
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-12 items-center">
@@ -139,6 +152,10 @@ export default function Home() {
                 variants={fadeUp}
                 className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm text-primary-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-primary-100 shadow-sm shadow-primary-900/5 mb-7"
               >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
+                </span>
                 <Activity className="w-4 h-4" />
                 Skrining Non-Invasif Berbasis AI
               </motion.div>
@@ -273,7 +290,7 @@ export default function Home() {
                   value={s.value}
                   decimals={0}
                   suffix={s.suffix}
-                  className="block text-4xl md:text-5xl font-extrabold text-navy-900 tracking-[-0.03em] mt-2.5 tabular-nums"
+                  className="block text-4xl md:text-5xl font-extrabold text-navy-900 tracking-[-0.03em] mt-2.5 tabular-nums animate-count-glow"
                 />
                 <p className="text-sm text-navy-600 mt-1.5">{s.desc}</p>
               </motion.div>
@@ -301,9 +318,9 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5 }}
-            className="surface-card overflow-hidden"
+            className="surface-card overflow-hidden premium-card-accent"
           >
-            <div className="flex items-center gap-3 px-5 py-3.5 border-b border-navy-100/70 bg-navy-50/40">
+            <div className="relative flex items-center gap-3 px-5 py-3.5 border-b border-navy-100/70 bg-navy-50/40">
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="w-2.5 h-2.5 rounded-full bg-navy-200" />
                 <span className="w-2.5 h-2.5 rounded-full bg-navy-200" />
@@ -312,6 +329,10 @@ export default function Home() {
               <div className="hidden sm:flex items-center gap-2 bg-white border border-navy-100/80 rounded-md px-3 py-1 text-[11px] font-medium text-navy-600">
                 <ScanSearch className="w-3 h-3 text-primary-600" />
                 anevision.app/screening
+              </div>
+              {/* Subtle scan line */}
+              <div className="absolute inset-x-0 top-0 h-px overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary-400/70 to-transparent animate-scan-line" />
               </div>
             </div>
 
@@ -361,13 +382,14 @@ export default function Home() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-40px" }}
                   transition={{ duration: 0.45, delay: i * 0.1 }}
-                  className="surface-card surface-card-bordered p-6 h-full relative"
+                  className="premium-card premium-card-accent card-grid-texture p-6 h-full relative"
                 >
-                  <span className="absolute -top-3 -right-1 text-[56px] font-extrabold text-navy-900/[0.05] select-none leading-none pointer-events-none">
+                  <div className="card-glow-corner" />
+                  <span className="absolute -top-3 -right-1 text-[56px] font-extrabold text-navy-900/[0.05] select-none leading-none pointer-events-none z-0">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <div className="relative flex items-center gap-2.5 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center text-primary-700">
+                    <div className="icon-chip w-10 h-10">
                       {step.icon}
                     </div>
                     <span className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 text-white text-[10px] font-bold flex items-center justify-center shadow-sm shadow-primary-600/25">
@@ -399,11 +421,12 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45 }}
-              className="md:col-span-7 surface-card surface-card-bordered overflow-hidden"
+              className="md:col-span-7 premium-card premium-card-accent card-grid-texture"
             >
+              <div className="card-glow-corner" />
               <div className="grid grid-cols-1 sm:grid-cols-2 h-full">
                 <div className="p-7">
-                  <FeatureIcon icon={<Eye className="w-4.5 h-4.5" />} />
+                  <IconChip icon={<Eye className="w-4.5 h-4.5" />} />
                   <h3 className="text-base font-bold text-navy-900">Analisis Ganda</h3>
                   <p className="text-sm text-navy-600 leading-relaxed mt-2.5">
                     Menganalisis citra mata (konjungtiva) dan kuku secara bersamaan untuk skrining
@@ -411,8 +434,9 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="p-7 bg-gradient-to-br from-primary-50/60 to-transparent flex items-center justify-center border-l border-navy-100/50">
-                  <div className="w-28 h-28">
-                    <EyeArt className="w-full h-full" animate={false} />
+                  <div className="w-28 h-28 relative">
+                    <div className="absolute inset-0 rounded-full bg-primary-200/40 blur-xl" />
+                    <EyeArt className="w-full h-full relative" animate={false} />
                   </div>
                 </div>
               </div>
@@ -424,10 +448,11 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: 0.08 }}
-              className="md:col-span-5 surface-card surface-card-bordered overflow-hidden flex flex-col"
+              className="md:col-span-5 premium-card premium-card-accent card-grid-texture overflow-hidden flex flex-col"
             >
+              <div className="card-glow-corner" />
               <div className="p-7 flex-1">
-                <FeatureIcon icon={<FlaskConical className="w-4.5 h-4.5" />} />
+                <IconChip icon={<FlaskConical className="w-4.5 h-4.5" />} />
                 <h3 className="text-base font-bold text-navy-900">Peta Perhatian (XAI)</h3>
                 <p className="text-sm text-navy-600 leading-relaxed mt-2.5">
                   Hasil skrining dilengkapi peta perhatian konjungtiva dan kotak deteksi kuku, agar
@@ -449,9 +474,10 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: 0.04 }}
-              className="md:col-span-5 surface-card surface-card-bordered p-7"
+              className="md:col-span-5 premium-card premium-card-accent card-grid-texture p-7"
             >
-              <FeatureIcon icon={<Lock className="w-4.5 h-4.5" />} />
+              <div className="card-glow-corner" />
+              <IconChip icon={<Lock className="w-4.5 h-4.5" />} />
               <h3 className="text-base font-bold text-navy-900">Privasi Terjaga</h3>
               <p className="text-sm text-navy-600 leading-relaxed mt-2.5">
                 Foto diproses langsung di memori server dan tidak disimpan ke penyimpanan mana pun.
@@ -467,9 +493,10 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: 0.08 + i * 0.06 }}
-                className="md:col-span-3 surface-card surface-card-bordered p-6"
+                className="md:col-span-3 premium-card premium-card-accent card-grid-texture p-6"
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center text-primary-700 mb-4">
+                <div className="card-glow-corner" />
+                <div className="w-10 h-10 rounded-xl icon-chip mb-4">
                   {f.icon}
                 </div>
                 <h3 className="text-sm font-bold text-navy-900 mb-2">{f.title}</h3>
@@ -508,41 +535,65 @@ export default function Home() {
                 <h3 className="text-lg font-bold text-white">Pipeline Analisis Anevision</h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    icon: <Eye className="w-5 h-5" />,
-                    title: "Analisis Mata",
-                    desc: "Ensemble Ridge Regression + MobileNetV2 CNN pada citra konjungtiva.",
-                    metric: "MAE ±1.3 g/dL",
-                  },
-                  {
-                    icon: <Hand className="w-5 h-5" />,
-                    title: "Analisis Kuku",
-                    desc: "Deteksi & segmentasi kuku (YOLO26-seg), lalu estimasi Hb dengan CNN ResNet18.",
-                    metric: "MAE ±1.4 g/dL",
-                  },
-                  {
-                    icon: <ScanSearch className="w-5 h-5" />,
-                    title: "Fusi & Klasifikasi",
-                    desc: "Hasil kedua model digabung berdasar MAE, diklasifikasi sesuai threshold WHO.",
-                    metric: "Keluaran 4–18 g/dL",
-                  },
-                ].map((s, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col gap-3 p-4 rounded-xl bg-white/[0.06] border border-white/10 transition-smooth hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08]"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-primary-300">{s.icon}</span>
-                      <p className="text-sm font-bold text-white">{s.title}</p>
+              <div className="relative">
+                {/* Animated connector line between steps */}
+                <svg
+                  className="hidden md:block absolute -top-6 left-0 right-0 h-6 w-full text-primary-300/70"
+                  viewBox="0 0 100 24"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5 12 C 30 12, 70 12, 95 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray="6 7"
+                    className="animate-dash-move"
+                  />
+                </svg>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
+                  {[
+                    {
+                      icon: <Eye className="w-5 h-5" />,
+                      title: "Analisis Mata",
+                      desc: "Ensemble Ridge Regression + MobileNetV2 CNN pada citra konjungtiva.",
+                      metric: "MAE ±1.3 g/dL",
+                    },
+                    {
+                      icon: <Hand className="w-5 h-5" />,
+                      title: "Analisis Kuku",
+                      desc: "Deteksi & segmentasi kuku (YOLO26-seg), lalu estimasi Hb dengan CNN ResNet18.",
+                      metric: "MAE ±1.4 g/dL",
+                    },
+                    {
+                      icon: <ScanSearch className="w-5 h-5" />,
+                      title: "Fusi & Klasifikasi",
+                      desc: "Hasil kedua model digabung berdasar MAE, diklasifikasi sesuai threshold WHO.",
+                      metric: "Keluaran 4–18 g/dL",
+                    },
+                  ].map((s, i) => (
+                    <div
+                      key={i}
+                      className="relative group flex flex-col gap-3 p-5 rounded-xl bg-white/[0.06] border border-white/10 transition-smooth hover:-translate-y-0.5 hover:border-primary-400/30 hover:bg-white/[0.09] hover:shadow-lg hover:shadow-primary-500/10"
+                    >
+                      <div className="card-glow-corner" />
+                      <div className="flex items-center gap-2.5">
+                        <span className="relative flex items-center justify-center w-9 h-9 rounded-lg bg-primary-500/15 border border-primary-500/25 text-primary-200 group-hover:bg-primary-500/25 transition-smooth">
+                          {s.icon}
+                        </span>
+                        <p className="text-sm font-bold text-white">{s.title}</p>
+                      </div>
+                      <p className="text-xs text-navy-300 leading-relaxed">{s.desc}</p>
+                      <span className="mt-auto inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-500/15 border border-primary-500/25 text-[11px] font-bold text-primary-200">
+                        <span className="w-1 h-1 rounded-full bg-primary-300 animate-pulse" />
+                        {s.metric}
+                      </span>
                     </div>
-                    <p className="text-xs text-navy-300 leading-relaxed">{s.desc}</p>
-                    <span className="mt-auto inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-500/15 border border-primary-500/25 text-[11px] font-bold text-primary-200">
-                      {s.metric}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               <div className="hairline my-7" />
@@ -571,7 +622,7 @@ export default function Home() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 via-primary-700 to-navy-800 p-10 md:p-16 text-center noise-bg"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800 p-10 md:p-16 text-center noise-bg animate-gradient-shift"
           >
             <div className="absolute -top-16 -left-16 w-56 h-56 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-20 -right-10 w-64 h-64 bg-primary-400/20 rounded-full blur-2xl" />
@@ -613,9 +664,14 @@ export default function Home() {
   );
 }
 
-function FeatureIcon({ icon }: { icon: ReactNode }) {
+function IconChip({ icon, title }: { icon: ReactNode; title?: string }) {
   return (
-    <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center text-primary-700 mb-3.5">
+    <div
+      className="icon-chip w-10 h-10 mb-3.5"
+      title={title}
+      role="img"
+      aria-label={title}
+    >
       {icon}
     </div>
   );

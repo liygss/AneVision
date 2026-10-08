@@ -351,6 +351,136 @@
   opacity: 1;
 }
 
+/* ============ PREMIUM CARD (bento) ============ */
+
+.premium-card {
+  position: relative;
+  border-radius: 1.25rem;
+  background: white;
+  border: 1px solid rgba(217, 226, 236, 0.65);
+  box-shadow:
+    0 1px 2px rgba(16, 42, 67, 0.05),
+    0 10px 30px -12px rgba(16, 42, 67, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+.premium-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(8, 145, 178, 0.35),
+    rgba(6, 182, 212, 0.08) 35%,
+    rgba(16, 42, 67, 0) 70%,
+    rgba(8, 145, 178, 0.25)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.premium-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    rgba(255, 255, 255, 0.5) 45%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.5) 55%,
+    transparent
+  );
+  transform: skewX(-18deg) translateX(0);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.premium-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(8, 145, 178, 0.35);
+  box-shadow:
+    0 4px 8px rgba(16, 42, 67, 0.05),
+    0 24px 60px -16px rgba(8, 145, 178, 0.28),
+    0 12px 32px -12px rgba(16, 42, 67, 0.18);
+}
+.premium-card:hover::after {
+  left: inherit;
+  transform: translateX(320%) skewX(-18deg);
+  opacity: 1;
+}
+.premium-card:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+/* Top accent hairline inside premium cards */
+.premium-card-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14%;
+  right: 14%;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.5), transparent);
+  z-index: 2;
+}
+
+/* Subtle dot-grid texture for feature cards */
+.card-grid-texture {
+  background-image: radial-gradient(rgba(8, 145, 178, 0.09) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Soft radial sheen parked in the corner of premium cards */
+.card-glow-corner {
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 180px;
+  height: 180px;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at center,
+    rgba(6, 182, 212, 0.14) 0%,
+    rgba(6, 182, 212, 0.05) 40%,
+    transparent 70%
+  );
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+/* Icon chip that sits on the accent hairline */
+.icon-chip {
+  position: relative;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, #ecfeff, #cffafe);
+  border: 1px solid rgba(6, 182, 212, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 4px 12px -4px rgba(8, 145, 178, 0.35);
+  color: #0e7490;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.premium-card:hover .icon-chip {
+  transform: translateY(-2px) scale(1.06);
+}
+
 /* ============ EYEBROW ============ */
 
 .eyebrow {

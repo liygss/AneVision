@@ -14,6 +14,7 @@ interface PhotoCardProps {
   objectPosition?: string;
   initialRotate: number;
   delay: number;
+  children?: ReactNode;
 }
 
 function PhotoCard({
@@ -28,6 +29,7 @@ function PhotoCard({
   objectPosition,
   initialRotate,
   delay,
+  children,
 }: PhotoCardProps) {
   return (
     <motion.div
@@ -67,6 +69,7 @@ function PhotoCard({
             </p>
           </div>
         </div>
+        {children}
       </div>
     </motion.div>
   );
@@ -84,12 +87,22 @@ export default function HeroPhotoGrid() {
         icon={<Eye className="w-3.5 h-3.5" />}
         label="Citra Konjungtiva"
         dotClass="bg-emerald-400"
-        position="absolute top-6 left-2 sm:left-4 w-[210px] sm:w-[240px] md:w-[260px] z-10"
+        position="absolute top-6 left-2 sm:left-4 w-[210px] sm:w-[240px] md:w-[260px] z-10 animate-float"
         aspect="aspect-[4/5]"
         loading="eager"
         initialRotate={-3}
         delay={0.2}
-      />
+      >
+        <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl pointer-events-none">
+          <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-300/90 to-transparent animate-scan-line" />
+        </div>
+        <div className="absolute top-3 right-3">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+          </span>
+        </div>
+      </PhotoCard>
 
       <PhotoCard
         src="/image/smartphone-health.jpg"
@@ -97,7 +110,7 @@ export default function HeroPhotoGrid() {
         icon={<ScanSearch className="w-3.5 h-3.5" />}
         label="Skrining via HP"
         dotClass="bg-primary-300"
-        position="absolute top-0 right-0 sm:right-4 w-[170px] sm:w-[190px] md:w-[205px] z-20"
+        position="absolute top-0 right-0 sm:right-4 w-[170px] sm:w-[190px] md:w-[205px] z-20 animate-float-slow"
         aspect="aspect-square"
         loading="lazy"
         initialRotate={2.5}
@@ -110,7 +123,7 @@ export default function HeroPhotoGrid() {
         icon={<HeartPulse className="w-3.5 h-3.5" />}
         label="Konsultasi Medis"
         dotClass="bg-emerald-400"
-        position="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[195px] sm:w-[220px] md:w-[240px] z-30"
+        position="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[195px] sm:w-[220px] md:w-[240px] z-30 animate-float-delay"
         aspect="aspect-[4/3]"
         loading="lazy"
         objectPosition="center top"
