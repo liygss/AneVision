@@ -80,12 +80,11 @@ def load_nail_model() -> bool:
         return res is not None
 
     try:
-        _stderr = open("/tmp/nail_worker_stderr.log", "a")
         _proc = subprocess.Popen(
             [_VENV_NAIL_PY, "-u", _WORKER],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=_stderr,
+            stderr=None,
             text=True,
             bufsize=1,
             cwd=str(_BACKEND_DIR),
