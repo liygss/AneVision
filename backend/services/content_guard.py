@@ -51,6 +51,13 @@ FLAT_MIN_GRAY_STD = 10.0
 MIN_SKIN_FRACTION = 0.03
 SKIN_HSV_LOWER = (0, 30, 50)
 SKIN_HSV_UPPER = (30, 180, 255)
+# Conjunctiva red wraps the OpenCV hue circle (>~160), so a red lower-lid macro
+# scores ~0 with the warm-skin band above and has no iris for the Haar cascade.
+# Counting red as body tissue only for the eye slot fixes real close-ups being
+# rejected as "bukan foto mata"; the morphology in _body_tissue_fraction still
+# drops speckle, so a noisy neutral/blue frame stays at ~0.
+RED_HSV_LOWER = (160, 30, 50)
+RED_HSV_UPPER = (180, 180, 255)
 
 _EYE_MESSAGE = (
     "Gambar ini bukan foto mata/konjungtiva. "
@@ -79,11 +86,30 @@ def _eye_cascade():
     return _cascade
 
 
-def _skin_fraction(img_bgr: np.ndarray) -> float:
+def _body_tissue_fraction(img_bgr: np.ndarray, *ranges: tuple) -> float:
+    """Share of body-tissue pixels for the given HSV ranges.
+
+    The morphological open pass matters: it removes single-pixel speckle, so a
+    noisy neutral/blue frame (whose hue happens to touch a range) stays at ~0
+    while coherent tissue survives.
+    """
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-    skin = cv2.inRange(hsv, SKIN_HSV_LOWER, SKIN_HSV_UPPER)
-    skin = cv2.morphologyEx(skin, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8), iterations=2)
-    return float(np.count_nonzero(skin)) / float(skin.size)
+    mask = np.zeros(hsv.shape[:2], np.uint8)
+    for lower, upper in ranges:
+        mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lower, upper))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8), iterations=2)
+    return float(np.count_nonzero(mask)) / float(mask.size)
+
+
+def _skin_fraction(img_bgr: np.ndarray) -> float:
+    return _body_tissue_fraction(img_bgr, (SKIN_HSV_LOWER, SKIN_HSV_UPPER))
+
+
+def _eye_tissue_fraction(img_bgr: np.ndarray) -> float:
+    """Body-tissue prior for the eye slot: warm skin OR conjunctiva red."""
+    return _body_tissue_fraction(
+        img_bgr, (SKIN_HSV_LOWER, SKIN_HSV_UPPER), (RED_HSV_LOWER, RED_HSV_UPPER)
+    )
 
 
 def _looks_like_document(img_bgr: np.ndarray) -> bool:
@@ -151,8 +177,10 @@ def check_eye_image(img_bgr) -> str | None:
     if tissue > MAX_TISSUE_FRACTION:
         return _EYE_MESSAGE
 
-    # Eyelid skin around the conjunctiva, or a detected eye, must be present.
-    if _skin_fraction(img_bgr) < MIN_SKIN_FRACTION and not _eye_detected(img_bgr):
+    # Eyelid skin (or conjunctiva red) around the eye, or a detected eye, must
+    # be present. Red is required here because a lower-lid macro has no warm
+    # skin and no iris, so skin-only corroboration rejected valid close-ups.
+    if _eye_tissue_fraction(img_bgr) < MIN_SKIN_FRACTION and not _eye_detected(img_bgr):
         return _EYE_MESSAGE
     return None
 
