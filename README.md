@@ -125,6 +125,19 @@ app.include_router(router, prefix="/api")   # /api/health, /api/predict
    `https://<proyek>.vercel.app/screening` (deep link) juga terbuka — fallback
    SPA menanganinya.
 
+### Backend: wajib build lewat Dockerfile
+
+`backend/railway.json` memaksa Railway memakai `builder: DOCKERFILE`. Tanpa itu
+Railway memakai Railpack yang hanya memasang `requirements.txt`; karena
+`torch`, `ultralytics`, dan `mediapipe` sengaja dipisah ke `requirements_nail.txt`,
+detektor seg26/MediaPipe tidak terpasang dan deteksi kuku jatuh ke jalur `auto`
+yang hanya menggambar **satu** kotak. Dockerfile memasang seluruh dependensi
+(termasuk nail) ke satu interpreter, sehingga kotak deteksi kuku sama banyaknya
+dengan hasil localhost.
+
+Kalau membuat service Railway manual, set **Root Directory** ke `backend` dan
+biarkan builder **Dockerfile** (jangan Railpack/Nixpacks).
+
 ### Kalau backend tidak tersedia
 
 Situs `frontend` tetap utuh: beranda, `/demo`, dan `/about` berfungsi penuh, dan
