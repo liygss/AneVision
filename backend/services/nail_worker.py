@@ -114,18 +114,27 @@ def _load():
     ainailsys_dir = _NAIL_DIR.parent / "AINailSys" / "models" / "deployment"
     s1_path = ainailsys_dir / "stage1_binary.onnx"
     s2_path = ainailsys_dir / "stage2_multiclass.onnx"
+    print(f"[nail_worker] AINailSys check: dir={ainailsys_dir} exists={ainailsys_dir.exists()} s1={s1_path.exists()} s2={s2_path.exists()}", flush=True)
     if s1_path.exists() and s2_path.exists():
         try:
             import onnxruntime as _ort
             import json as _json
+            print(f"[nail_worker] Loading AINailSys from {ainailsys_dir}", flush=True)
             _ainailsys_s1 = _ort.InferenceSession(str(s1_path))
             _ainailsys_s2 = _ort.InferenceSession(str(s2_path))
             with open(ainailsys_dir / "stage1_binary.json") as f:
                 _ainailsys_s1_meta = _json.load(f)
             with open(ainailsys_dir / "stage2_multiclass.json") as f:
                 _ainailsys_s2_meta = _json.load(f)
-        except Exception:
+            print(f"[nail_worker] AINailSys siap", flush=True)
+        except Exception as e:
+            print(f"[nail_worker] Gagal load AINailSys: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             _ainailsys_s1 = _ainailsys_s2 = None
+            _ainailsys_s1_meta = _ainailsys_s2_meta = None
+    else:
+        print(f"[nail_worker] AINailSys files missing", flush=True)
 
 
 def _manual_finger(img_rgb, nail_box_norm):

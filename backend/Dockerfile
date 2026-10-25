@@ -37,6 +37,9 @@ RUN .venv/bin/pip install --no-cache-dir torch torchvision --index-url https://d
 # Model weights and app code. .dockerignore keeps datasets/experiments out.
 COPY . .
 
+# Pastikan AINailSys ONNX selalu ter-copy (external data files)
+COPY models/AINailSys /app/models/AINailSys
+
 ENV MODEL_MODE=auto \
     PYTHONUNBUFFERED=1 \
     ANEVIA_SEG26_WEIGHTS=/app/models/Kuku-Anemia/core/models/seg_runtime/yolo26_seg_best.pt

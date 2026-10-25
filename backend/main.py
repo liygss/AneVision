@@ -88,6 +88,38 @@ async def debug_nail():
         import traceback
         return {"ok": False, "err": str(e)[:500]}
 
+
+@app.get("/api/debug_ainailsys")
+async def debug_ainailsys():
+    try:
+        from pathlib import Path
+        from services import nail
+        backend_dir = Path(__file__).parent
+        nail_dir = backend_dir / "models" / "Kuku-Anemia"
+        ainailsys_dir = nail_dir.parent / "AINailSys" / "models" / "deployment"
+        files = []
+        if ainailsys_dir.exists():
+            for f in ainailsys_dir.iterdir():
+                files.append({"name": f.name, "size": f.stat().st_size})
+        # check worker globals
+        try:
+            import services.nail_worker as nw
+            s1 = getattr(nw, "_ainailsys_s1", None)
+            s2 = getattr(nw, "_ainailsys_s2", None)
+        except Exception as e:
+            s1 = s2 = f"err:{e}"
+        return {
+            "ainailsys_dir": str(ainailsys_dir),
+            "exists": ainailsys_dir.exists(),
+            "files": files,
+            "s1_loaded": s1 is not None and not isinstance(s1, str),
+            "s2_loaded": s2 is not None and not isinstance(s2, str),
+        }
+    except Exception as e:
+        import traceback
+        return {"ok": False, "err": str(e)[:1000], "tb": traceback.format_exc()[:2000]}
+
+
 app.include_router(router)
 
 # Vercel Services routes by rewriting "/api/*" to this service while the service
