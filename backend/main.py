@@ -89,11 +89,11 @@ async def debug_nail():
         return {"ok": False, "err": str(e)[:500]}
 
 
+@app.get("/debug_ainailsys")
 @app.get("/api/debug_ainailsys")
 async def debug_ainailsys():
     try:
         from pathlib import Path
-        from services import nail
         backend_dir = Path(__file__).parent
         nail_dir = backend_dir / "models" / "Kuku-Anemia"
         ainailsys_dir = nail_dir.parent / "AINailSys" / "models" / "deployment"
@@ -101,7 +101,6 @@ async def debug_ainailsys():
         if ainailsys_dir.exists():
             for f in ainailsys_dir.iterdir():
                 files.append({"name": f.name, "size": f.stat().st_size})
-        # check worker globals
         try:
             import services.nail_worker as nw
             s1 = getattr(nw, "_ainailsys_s1", None)
