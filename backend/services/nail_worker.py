@@ -115,11 +115,18 @@ def _load():
     s1_path = ainailsys_dir / "stage1_binary.onnx"
     s2_path = ainailsys_dir / "stage2_multiclass.onnx"
     print(f"[nail_worker] AINailSys check: dir={ainailsys_dir} exists={ainailsys_dir.exists()} s1={s1_path.exists()} s2={s2_path.exists()}", flush=True)
+    print(f"[nail_worker] AINailSys parent dirs: nail_dir={_NAIL_DIR} parent={_NAIL_DIR.parent} backend={_BACKEND_DIR}", flush=True)
+    try:
+        if ainailsys_dir.exists():
+            print(f"[nail_worker] AINailSys dir contents: {list(ainailsys_dir.iterdir())}", flush=True)
+    except Exception as e:
+        print(f"[nail_worker] AINailSys dir read error: {e}", flush=True)
     if s1_path.exists() and s2_path.exists():
         try:
             import onnxruntime as _ort
             import json as _json
             print(f"[nail_worker] Loading AINailSys from {ainailsys_dir}", flush=True)
+            print(f"[nail_worker] ort version: {_ort.__version__}", flush=True)
             _ainailsys_s1 = _ort.InferenceSession(str(s1_path))
             _ainailsys_s2 = _ort.InferenceSession(str(s2_path))
             with open(ainailsys_dir / "stage1_binary.json") as f:
