@@ -25,6 +25,8 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN python -m venv .venv \
     && grep -viE '^[[:space:]]*(tensorflow|torch|torchvision|ultralytics|mediapipe)' requirements.txt > /tmp/main-requirements.txt \
+    && .venv/bin/pip install --no-cache-dir --upgrade pip \
+    && .venv/bin/pip install --no-cache-dir 'numpy<2' \
     && .venv/bin/pip install --no-cache-dir -r /tmp/main-requirements.txt
 
 # Nail deps in the SAME venv: YOLO26-seg (ultralytics + torch CPU) and MediaPipe

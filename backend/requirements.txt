@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 pillow
-numpy
+numpy<2
 pydantic
 pydantic-settings
 opencv-python-headless

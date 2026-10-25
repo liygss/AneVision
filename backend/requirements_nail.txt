@@ -11,3 +11,4 @@ joblib
 ultralytics
 # CNN Hb (cnn_hb_resnet18_v2.onnx) + AINailSys post-hoc adjustment
 onnxruntime
+numpy<2
