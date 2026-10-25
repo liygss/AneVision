@@ -39,6 +39,7 @@ COPY . .
 
 # Pastikan AINailSys ONNX selalu ter-copy (external data files)
 COPY models/AINailSys /app/models/AINailSys
+RUN ls -la /app/models/AINailSys/models/deployment/ 2>&1 | head -15
 
 ENV MODEL_MODE=auto \
     PYTHONUNBUFFERED=1 \
