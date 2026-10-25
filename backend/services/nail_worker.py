@@ -112,20 +112,37 @@ def _load():
 
     # Load AINailSys ONNX models
     ainailsys_dir = _NAIL_DIR.parent / "AINailSys" / "models" / "deployment"
+    _AINAILSYS_DIR = ainailsys_dir
     s1_path = ainailsys_dir / "stage1_binary.onnx"
     s2_path = ainailsys_dir / "stage2_multiclass.onnx"
+    print(f"[nail_worker] AINailSys check: dir={ainailsys_dir} exists={ainailsys_dir.exists()} s1={s1_path.exists()} s2={s2_path.exists()}", flush=True)
+    print(f"[nail_worker] AINailSys parent dirs: nail_dir={_NAIL_DIR} parent={_NAIL_DIR.parent} backend={_BACKEND_DIR}", flush=True)
+    try:
+        if ainailsys_dir.exists():
+            print(f"[nail_worker] AINailSys dir contents: {list(ainailsys_dir.iterdir())}", flush=True)
+    except Exception as e:
+        print(f"[nail_worker] AINailSys dir read error: {e}", flush=True)
     if s1_path.exists() and s2_path.exists():
         try:
             import onnxruntime as _ort
             import json as _json
+            print(f"[nail_worker] Loading AINailSys from {ainailsys_dir}", flush=True)
+            print(f"[nail_worker] ort version: {_ort.__version__}", flush=True)
             _ainailsys_s1 = _ort.InferenceSession(str(s1_path))
             _ainailsys_s2 = _ort.InferenceSession(str(s2_path))
             with open(ainailsys_dir / "stage1_binary.json") as f:
                 _ainailsys_s1_meta = _json.load(f)
             with open(ainailsys_dir / "stage2_multiclass.json") as f:
                 _ainailsys_s2_meta = _json.load(f)
-        except Exception:
+            print(f"[nail_worker] AINailSys siap", flush=True)
+        except Exception as e:
+            print(f"[nail_worker] Gagal load AINailSys: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             _ainailsys_s1 = _ainailsys_s2 = None
+            _ainailsys_s1_meta = _ainailsys_s2_meta = None
+    else:
+        print(f"[nail_worker] AINailSys files missing", flush=True)
 
 
 def _manual_finger(img_rgb, nail_box_norm):
@@ -489,6 +506,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
     ainailsys_confidence = 0.0
     AINAILSYS_ADJUSTMENT = 0.61  # |coefficient| from retraining
     AINAILSYS_CONF_MIN = 0.70
+    print(f"[nail_worker] AINailSys in predict: s1={_ainailsys_s1 is not None} s2={_ainailsys_s2 is not None}", flush=True)
 
     if _ainailsys_s1 is not None:
         try:
@@ -545,6 +563,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
         "nail_condition_detail": ainailsys_stage2,
         "nail_condition_confidence": round(ainailsys_confidence, 4),
         "heatmap": _draw_box_overlay(img_rgb, items, middle),
+        "_debug_ainailsys": {"s1": _ainailsys_s1 is not None, "s2": _ainailsys_s2 is not None, "dir": str(globals().get('_AINAILSYS_DIR', locals().get('ainailsys_dir','?')))},
     }
 
 
