@@ -4,7 +4,7 @@ import SectionHeader from "@/components/SectionHeader";
 
 const metrics = [
   {
-    icon: <Eye className="w-5 h-5" />,
+    icon: <Eye className="w-4 h-4 sm:w-5 sm:h-5" />,
     title: "Analisis Mata - Ensemble",
     subtitle: "Utama (Penentu Hasil)",
     items: [
@@ -16,7 +16,7 @@ const metrics = [
     highlight: true,
   },
   {
-    icon: <Hand className="w-5 h-5" />,
+    icon: <Hand className="w-4 h-4 sm:w-5 sm:h-5" />,
     title: "Analisis Kuku",
     subtitle: "Referensi Tambahan",
     items: [
@@ -28,7 +28,7 @@ const metrics = [
     highlight: false,
   },
   {
-    icon: <GitMerge className="w-5 h-5" />,
+    icon: <GitMerge className="w-4 h-4 sm:w-5 sm:h-5" />,
     title: "Fusi Terbobot (MAE-weighted)",
     subtitle: "Kombinasi Kedua Model",
     items: [
@@ -65,7 +65,7 @@ const stagger = {
 
 export default function ModelMetrics() {
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-white to-navy-50/40">
+    <section className="py-16 sm:py-20 md:py-28 bg-gradient-to-b from-white to-navy-50/40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           eyebrow="Validasi & Kredibilitas"
@@ -79,36 +79,36 @@ export default function ModelMetrics() {
           whileInView="visible"
           viewport={{ once: true, margin: "-40px" }}
           variants={stagger}
-          className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6 sm:mb-10"
         >
           {metrics.map((metric, i) => (
             <motion.div
               key={i}
               variants={fadeUp}
-              className={`premium-card premium-card-accent card-grid-texture p-6 relative overflow-hidden h-full ${
+              className={`premium-card premium-card-accent card-grid-texture p-5 sm:p-6 relative overflow-hidden h-full ${
                 metric.highlight ? "ring-1 ring-primary-200/60" : ""
               }`}
             >
               <div className="card-glow-corner" />
-              <div className="relative flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="icon-chip w-10 h-10">
+              <div className="relative flex items-start justify-between mb-3 sm:mb-4">
+                <div className="flex items-center gap-2 sm:gap-2.5">
+                  <div className="icon-chip w-9 h-9 sm:w-10 sm:h-10">
                     {metric.icon}
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-navy-900">{metric.title}</h3>
-                    <p className="text-[11px] text-navy-500">{metric.subtitle}</p>
+                    <p className="text-[10px] sm:text-[11px] text-navy-500">{metric.subtitle}</p>
                   </div>
                 </div>
                 {metric.highlight && (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
+                  <span className="text-[8px] sm:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
                     UTAMA
                   </span>
                 )}
               </div>
-              <ul className="relative space-y-2.5">
+              <ul className="relative space-y-2 sm:space-y-2.5">
                 {metric.items.map((item, idx) => (
-                  <li key={idx} className="flex items-center justify-between text-xs">
+                  <li key={idx} className="flex items-center justify-between text-xs gap-2">
                     <span className="text-navy-600">{item.label}</span>
                     <span className="font-semibold text-navy-900 text-right">{item.value}</span>
                   </li>
@@ -119,30 +119,30 @@ export default function ModelMetrics() {
         </motion.div>
 
         {/* Detailed metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Classification metrics */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="premium-card premium-card-accent card-grid-texture p-6 md:p-7 relative overflow-hidden"
+            className="premium-card premium-card-accent card-grid-texture p-5 sm:p-6 md:p-7 relative overflow-hidden"
           >
             <div className="card-glow-corner" />
-            <div className="relative flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl icon-chip">
-                <BarChart3 className="w-5 h-5" />
+            <div className="relative flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl icon-chip">
+                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-navy-900">Metrik Evaluasi</h3>
                 <p className="text-xs text-navy-600">Mean Absolute Error & Klasifikasi</p>
               </div>
             </div>
-            <div className="relative grid grid-cols-2 gap-4">
+            <div className="relative grid grid-cols-2 gap-3 sm:gap-4">
               {classificationMetrics.map((m, i) => (
-                <div key={i} className="p-4 rounded-xl bg-white/60 border border-navy-100/60">
-                  <p className="text-[11px] text-navy-600 mb-1.5">{m.label}</p>
-                  <p className="text-lg font-extrabold text-navy-900 tabular-nums">{m.value}</p>
+                <div key={i} className="p-3 sm:p-4 rounded-xl bg-white/60 border border-navy-100/60">
+                  <p className="text-[10px] sm:text-[11px] text-navy-600 mb-1 sm:mb-1.5 leading-tight">{m.label}</p>
+                  <p className="text-base sm:text-lg font-extrabold text-navy-900 tabular-nums">{m.value}</p>
                 </div>
               ))}
             </div>
@@ -154,27 +154,27 @@ export default function ModelMetrics() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.08 }}
-            className="premium-card premium-card-accent card-grid-texture p-6 md:p-7 relative overflow-hidden"
+            className="premium-card premium-card-accent card-grid-texture p-5 sm:p-6 md:p-7 relative overflow-hidden"
           >
             <div className="card-glow-corner" />
-            <div className="relative flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl icon-chip">
-                <Activity className="w-5 h-5" />
+            <div className="relative flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl icon-chip">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-navy-900">Threshold Anemia (WHO)</h3>
                 <p className="text-xs text-navy-600">Batas klasifikasi yang digunakan</p>
               </div>
             </div>
-            <div className="relative space-y-2.5">
+            <div className="relative space-y-2 sm:space-y-2.5">
               {thresholds.map((t, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/60 border border-navy-100/60">
+                <div key={i} className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-white/60 border border-navy-100/60">
                   <span className="text-sm text-navy-700">{t.gender}</span>
                   <span className="text-sm font-bold text-navy-900">{t.value}</span>
                 </div>
               ))}
             </div>
-            <p className="relative text-[11px] text-navy-500 mt-3">
+            <p className="relative text-[10px] sm:text-[11px] text-navy-500 mt-2 sm:mt-3">
               Model mata menggunakan threshold berbasis jenis kelamin sesuai WHO. Hasil akhir mengacu pada model mata sebagai penentu.
             </p>
           </motion.div>
@@ -186,10 +186,10 @@ export default function ModelMetrics() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45, delay: 0.12 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 rounded-xl bg-amber-50/60 border border-amber-200/60"
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl bg-amber-50/60 border border-amber-200/60"
         >
-          <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-            <ShieldAlert className="w-5 h-5 text-amber-600" />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-amber-900 mb-0.5">Penting</p>
