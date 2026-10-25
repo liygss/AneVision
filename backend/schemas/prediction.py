@@ -13,10 +13,12 @@ class EyeResult(BaseModel):
     cnn_probability: Optional[float] = None
     cnn_raw_probability: Optional[float] = None
     source: Optional[str] = None
+    gender: Optional[str] = None
 
 
 class NailResult(BaseModel):
     estimated_hb: Optional[float] = None
+    estimated_hb_raw: Optional[float] = None
     status: Optional[str] = None
     confidence: Optional[float] = None
     threshold_used: Optional[float] = None
@@ -39,6 +41,7 @@ class FusionResult(BaseModel):
     estimated_hb: Optional[float] = None
     eye_weight: Optional[float] = None
     nail_weight: Optional[float] = None
+    confidence: Optional[float] = None
 
 
 class EstimatedRange(BaseModel):
@@ -57,6 +60,7 @@ class PredictionResponse(BaseModel):
     estimated_range: Optional[EstimatedRange] = None
     risk_level: str
     confidence: float
+    headline_source: Optional[str] = None
     eye: EyeResult
     nail: Optional[NailResult] = None
     fusion: Optional[FusionResult] = None

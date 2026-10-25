@@ -28,7 +28,7 @@ cd ../frontend && npm install
 
 Tanpa `requirements-eyeml.txt` dan `requirements_nail.txt`, backend tetap jalan dan menampilkan estimasi Hb dari model mata saja. Yang hilang adalah validator kedua dan deteksi kuku.
 
-Kemudian jalankan keduanya:
+Kemudian nyalakan backend + frontend sekaligus:
 
 ```bash
 ./start.sh
@@ -36,10 +36,50 @@ Kemudian jalankan keduanya:
 
 | | |
 |---|---|
-| Frontend | http://localhost:5173 |
-| Backend | http://localhost:8000 (`GET /health`, `POST /predict`) |
+| Frontend | http://127.0.0.1:5173 |
+| Backend | http://127.0.0.1:8000 (`GET /health`, `POST /predict`) |
+| Publik (HP) | opsional: jalankan `./start.sh --ngrok`, lalu pakai URL `*.ngrok-free.dev` yang dicetak script |
+
+Kalau port 5173/8000 sudah dipakai, script otomatis pindah ke port berikutnya
+(5174/8001) dan tetap mencetak URL yang benar.
+
+Opsi lain:
+
+```bash
+./start.sh --ngrok   # backend + frontend + tunnel publik ngrok
+./start.sh --help    # daftar opsi
+```
 
 Backend berjalan dengan `MODEL_MODE=real` agar model dimuat sungguhan, bukan mock. Vite mem-proxy `/api` ke backend, jadi tidak perlu konfigurasi CORS.
+
+### Tunnel ngrok
+
+`./start.sh --ngrok` menjalankan ngrok (butuh authtoken, lihat
+<https://dashboard.ngrok.com/get-started/your-authtoken>) supaya aplikasinya
+bisa dibuka dari HP atau dibagikan ke teman. Script mencetak URL publiknya
+dan memverifikasinya dari luar sebelum menyatakan tunnel siap. Tanpa opsi
+`--ngrok`, server hanya berjalan lokal dan tidak memerlukan ngrok.
+
+Dua hal yang perlu diketahui:
+
+- Paket gratis ngrok hanya boleh **satu sesi**. Kalau ada ngrok yang masih
+  jalan, tunnel baru ditolak dengan `ERR_NGROK_334`. Kalau tunnel yang lama
+  memang milik project ini, `start.sh` akan **ambil alih** sendiri (menutup
+  sisa frontend/backend/tunnel lama lalu start ulang). Kalau tunnelnya milik
+  aplikasi lain, tutup manual dengan `pkill -x ngrok`.
+- Browser (termasuk HP) akan melihat halaman peringatan ngrok **sekali** di
+  kunjungan pertama. Klik "Visit Site" sekali saja, setelahnya URL langsung
+  membuka aplikasinya.
+
+> Vite secara default hanya listen di `::1` (IPv6), sehingga tunnel yang
+> dialing ke `localhost`/`127.0.0.1` akan membalas 502. `start.sh` memaksa
+> vite bind ke `127.0.0.1` dan menunjuk tunnel ke alamat itu secara
+> eksplisit.
+
+`start-ngrok.sh` adalah versi lama dari script yang sama; `start.sh --ngrok`
+sekarang sudah mencakup tunnel plus pengecekan tambahan (port IPv4/IPv6, proses
+yang mati, verifikasi URL dari luar), jadi `start-ngrok.sh` bisa dihapus.
+
 
 ## Arsitektur
 
@@ -151,5 +191,13 @@ sebagai "server online".
 
 ```bash
 ./start.sh
-curl http://localhost:8000/health
+curl http://127.0.0.1:8000/health
 ```
+
+`./start.sh --ngrok` juga mencetak URL publik ngrok; verifikasi dari luar bisa
+dilakukan dengan:
+
+```bash
+curl -H "ngrok-skip-browser-warning: true" https://<url-ngrok>/api/health
+```
+

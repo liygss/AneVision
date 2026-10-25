@@ -7,6 +7,7 @@ export interface PredictionResult {
   };
   risk_level: "low" | "moderate" | "high";
   confidence: number;
+  headline_source?: string;
   eye: {
     hgb_predicted?: number;
     status?: string;
@@ -18,10 +19,12 @@ export interface PredictionResult {
     cnn_probability?: number;
     cnn_raw_probability?: number;
     source?: string;
+    gender?: string;
     estimated_hb?: number;
   };
   nail?: {
     estimated_hb?: number;
+    estimated_hb_raw?: number;
     status?: string;
     confidence?: number;
     threshold_used?: number;
@@ -44,6 +47,7 @@ export interface PredictionResult {
     estimated_hb?: number;
     eye_weight?: number;
     nail_weight?: number;
+    confidence?: number;
   };
   models_disagree?: boolean;
   explanation?: {

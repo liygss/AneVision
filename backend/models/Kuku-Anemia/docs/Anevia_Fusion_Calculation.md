@@ -590,3 +590,35 @@ This means the model with lower validation error receives a larger contribution 
 - Use the actual Hb lab value as ground truth if available.
 - Treat the final output as an **AI-estimated Hb value**, not a laboratory measurement.
 - The final medical interpretation should be confirmed through proper clinical testing.
+
+---
+
+# 18. Implementasi Evaluasi Fusion
+
+Rekomendasi di §13–14 kini diimplementasikan oleh script:
+
+```text
+backend/scripts/eval_fusion.py
+```
+
+Script menerima tabel per-pasien (mata + kuku + Hb lab dari orang yang sama)
+dan membandingkan strategi pada himpunan yang sama:
+
+```csv
+patient_id,eye_hb,nail_hb,hb_true,gender
+1,10.8,11.4,11.0,F
+```
+
+Metrik: MAE, RMSE, R², Pearson, bias + limits of agreement (Bland-Altman),
+CI 95% bootstrap untuk MAE, dan metrik klasifikasi ambang WHO (bila `gender` diisi).
+
+```text
+python scripts/eval_fusion.py --input pairs_val.csv --eye-mae 1.30 --nail-mae 2.65
+python scripts/eval_fusion.py --input pairs_test.csv --out fusion_evaluation.json
+python scripts/eval_fusion.py --selftest
+```
+
+Catatan: `weighted_fusion` memakai `services/fusion.py` produksi. Bobot MAE
+harus diukur di data **validasi**, dan evaluasi akhir dilakukan di data
+**test** (§13). `weighted_fusion_opt` adalah pembanding optimistis (bobot
+di-tuning in-sample) dan tidak boleh dilaporkan sebagai hasil test.

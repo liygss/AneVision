@@ -6,7 +6,7 @@ from services.inference import predict_eye, predict_nail, model_status
 from services.content_guard import check_nail_image_bytes
 from schemas.prediction import PredictionResponse, EyeResult, NailResult, FusionResult, EstimatedRange, Explanation
 from services.fusion import combine_predictions
-from services.calibration import calibrate_eye
+from services.calibration import calibrate_eye, models_disagree, reconcile_nail
 
 router = APIRouter()
 
@@ -91,35 +91,65 @@ async def predict(
     eye_status = eye_result_raw.get("status", "Normal")
     threshold_used = eye_result_raw.get("threshold_used", 12.0)
     margin = eye_result_raw.get("margin_ke_threshold", 0.0)
+    eye_gender = eye_result_raw.get("gender")
 
-    # A nail result is excluded from the combined estimate only when there is
+    # The headline is eye-authoritative. The eye Ridge is deterministic for the
+    # same photo + gender, whereas the nail worker's detection path depends on
+    # the host (seg26 / mediapipe / auto, subprocess vs in-process), so fusing
+    # the nail into the headline made the same photo yield a different value on
+    # different runs (e.g. 16.5 -> 15.8). The nail estimate and the MAE-weighted
+    # fusion are still computed and shown as supplementary reference
+    # (fusion.estimated_hb), never as the deciding number.
+    estimated_hb = round(eye_hgb, 1)
+    eye_weight = 1.0
+    nail_weight = 0.0
+    models_disagree_flag = False
+    fusion_out = None
+    combined_confidence = round(eye_confidence, 3)
+
+    # A nail result is excluded from the reference fusion only when there is
     # genuinely no nail estimate (the worker errored / nothing detected). A
     # deviating nail — features outside the training distribution, Hb outside
     # the credible band, or a large difference from the eye — is still shown
-    # and still used in the fusion: we prefer a nail card that always has
-    # content over dropping the modality. A large eye-nail gap is surfaced via
-    # the "models_disagree" flag instead of excluding the nail.
+    # and still used in the reference fusion: we prefer a nail card that always
+    # has content over dropping the modality. A large eye-nail gap is surfaced
+    # via the "models_disagree" flag instead of excluding the nail.
     nail_hgb_raw = nail_result.get("estimated_hb", eye_hgb) if nail_result else None
     nail_unreliable = bool(nail_result is not None and nail_result.get("estimated_hb") is None)
 
-    nail_weight = 0.0
-    eye_weight = 1.0
-    models_disagree_flag = False
+    # Nilai kuku yang ditampilkan: apa adanya bila selisihnya dengan mata masih
+    # di dalam toleransi (<= 2 g/dL), tetapi ditarik ke rentang mata +/- 2 bila
+    # model kuku meleset jauh. Angka mentahnya tetap dikirim di
+    # ``estimated_hb_raw`` supaya bagian detail tetap transparan.
+    nail_display = None
+    nail_display_raw = None
+    nail_adjusted = False
+    nail_status = None
 
     if nail_result is not None and not nail_unreliable:
-        nail_hgb = nail_result.get("estimated_hb", eye_hgb)
+        nail_hgb = float(nail_result.get("estimated_hb", eye_hgb))
+        nail_display_raw = round(nail_hgb, 1)
+        nail_reconciled = reconcile_nail(nail_hgb, eye_hgb)
+        nail_adjusted = abs(nail_reconciled - nail_hgb) > 1e-9
+        nail_hgb = nail_reconciled
+        nail_display = round(nail_hgb, 1)
+        nail_threshold = nail_result.get("threshold_used", threshold_used)
+        nail_status = "Rendah (Anemia)" if nail_hgb < nail_threshold else "Normal"
+
         fusion = combine_predictions(eye_hgb, nail_hgb)
-        estimated_hb = fusion.estimated_hb
         eye_weight = fusion.eye_weight
         nail_weight = fusion.nail_weight
-        models_disagree_flag = fusion.disagree
-    else:
-        estimated_hb = round(eye_hgb, 1)
-
-    combined_confidence = round(eye_confidence, 3)
-    if nail_result is not None and not nail_unreliable:
+        # "Tidak sepakat" tetap dihitung dari selisih ASLI (bukan yang sudah
+        # ditarik), agar peringatan tidak hilang hanya karena penyesuaian.
+        models_disagree_flag = models_disagree(eye_hgb, nail_hgb_raw)
         nail_conf = nail_result.get("confidence", 0.5)
         combined_confidence = round(eye_weight * eye_confidence + nail_weight * nail_conf, 3)
+        fusion_out = FusionResult(
+            estimated_hb=fusion.estimated_hb,
+            eye_weight=round(eye_weight, 3),
+            nail_weight=round(nail_weight, 3),
+            confidence=combined_confidence,
+        )
 
     # Risk level from fused/eye Hb vs threshold
     if estimated_hb < 11.0:
@@ -129,7 +159,9 @@ async def predict(
     else:
         risk_level = "low"
 
-    range_buffer = round(0.5 + (1 - combined_confidence) * 1.0, 1)
+    # Range follows the headline confidence (eye), matching the eye-authoritative
+    # estimate; the fusion confidence is only used for the reference card.
+    range_buffer = round(0.5 + (1 - eye_confidence) * 1.0, 1)
     estimated_range = EstimatedRange(
         min=round(estimated_hb - range_buffer, 1),
         max=round(estimated_hb + range_buffer, 1),
@@ -146,13 +178,15 @@ async def predict(
         cnn_probability=eye_result_raw.get("cnn_probability"),
         cnn_raw_probability=eye_result_raw.get("cnn_raw_probability"),
         source=eye_result_raw.get("source"),
+        gender=eye_gender,
     )
 
     nail_out = None
     if nail_result is not None:
         nail_out = NailResult(
-            estimated_hb=nail_result.get("estimated_hb"),
-            status=nail_result.get("status"),
+            estimated_hb=nail_display if nail_display is not None else nail_result.get("estimated_hb"),
+            estimated_hb_raw=nail_display_raw,
+            status=nail_status or nail_result.get("status"),
             confidence=nail_result.get("confidence"),
             threshold_used=nail_result.get("threshold_used"),
             mae=nail_result.get("mae"),
@@ -175,20 +209,13 @@ async def predict(
     elif nail_error is not None:
         nail_out = NailResult(error=nail_error)
 
-    fusion_out = None
-    if nail_result is not None and not nail_unreliable:
-        fusion_out = FusionResult(
-            estimated_hb=estimated_hb,
-            eye_weight=round(eye_weight, 3),
-            nail_weight=round(nail_weight, 3),
-        )
-
     return PredictionResponse(
         success=True,
         estimated_hb=estimated_hb,
         estimated_range=estimated_range,
         risk_level=risk_level,
-        confidence=combined_confidence,
+        confidence=round(eye_confidence, 3),
+        headline_source="eye",
         eye=eye_result,
         nail=nail_out,
         fusion=fusion_out,

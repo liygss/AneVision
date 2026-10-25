@@ -366,6 +366,30 @@
   opacity: 1;
 }
 
+/* ============ STATIC PANEL (form surface) ============ */
+
+.panel {
+  position: relative;
+  background: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid rgba(217, 226, 236, 0.72);
+  box-shadow:
+    0 1px 2px rgba(16, 42, 67, 0.04),
+    0 10px 30px -18px rgba(16, 42, 67, 0.16);
+}
+
+.panel-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16%;
+  right: 16%;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.55), transparent);
+  pointer-events: none;
+}
+
 /* ============ PREMIUM CARD (bento) ============ */
 
 .premium-card {

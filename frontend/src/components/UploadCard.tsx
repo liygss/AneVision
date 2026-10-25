@@ -12,6 +12,7 @@ interface UploadCardProps {
   file: File | null;
   onFileSelect: (file: File) => void;
   onFileRemove: () => void;
+  tag?: { label: string; tone: "required" | "recommended" };
 }
 
 const ACCEPTED = "image/jpeg,image/png,image/webp";
@@ -25,6 +26,7 @@ export default function UploadCard({
   file,
   onFileSelect,
   onFileRemove,
+  tag,
 }: UploadCardProps) {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,23 +86,23 @@ export default function UploadCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "relative bg-white rounded-2xl border shadow-sm overflow-hidden transition-smooth",
+        "relative bg-white rounded-2xl border overflow-hidden transition-smooth shadow-[0_1px_2px_rgba(16,42,67,0.04),0_10px_30px_-18px_rgba(16,42,67,0.16)]",
         file
-          ? "border-emerald-200 shadow-emerald-100/40"
-          : "border-navy-100/60 hover:shadow-md"
+          ? "border-emerald-200 shadow-[0_1px_2px_rgba(16,42,67,0.04),0_12px_32px_-18px_rgba(16,185,129,0.35)]"
+          : "border-navy-100/70 hover:border-primary-200"
       )}
     >
       {/* Header */}
       <div className={cn(
         "px-5 py-4 border-b transition-smooth",
-        file ? "border-emerald-100/50" : "border-navy-50/50"
+        file ? "border-emerald-100/60" : "border-navy-100/50"
       )}>
         <div className="flex items-center gap-3">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center transition-smooth",
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-smooth ring-1",
             file
-              ? "bg-emerald-50"
-              : "bg-gradient-to-br from-primary-50 to-primary-100"
+              ? "bg-emerald-50 ring-emerald-100"
+              : "bg-gradient-to-br from-primary-50 to-primary-100 ring-primary-100/70"
           )}>
             {file ? (
               <motion.div
@@ -117,12 +119,26 @@ export default function UploadCard({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold text-navy-900">{title}</h3>
-            <p className="text-[11px] text-navy-500 mt-0.5 truncate">{description}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="text-[15px] font-bold leading-snug text-navy-900">{title}</h3>
+              {tag && (
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[11px] font-bold leading-normal",
+                    tag.tone === "required"
+                      ? "border-primary-200 bg-primary-50 text-primary-700"
+                      : "border-navy-200 bg-navy-100/70 text-navy-600"
+                  )}
+                >
+                  {tag.label}
+                </span>
+              )}
+            </div>
+            <p className="text-xs leading-relaxed text-navy-500 mt-1 line-clamp-2">{description}</p>
           </div>
           {file && (
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">
-              ✓ Siap
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex-shrink-0">
+              Siap
             </span>
           )}
         </div>
@@ -144,7 +160,7 @@ export default function UploadCard({
                 <img
                   src={preview}
                   alt={`Pratinjau ${icon === "eye" ? "mata" : "kuku"}`}
-                  className="w-full h-48 sm:h-52 object-cover"
+                  className="w-full h-52 sm:h-56 object-cover"
                 />
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-navy-900/0 group-hover:bg-navy-900/20 rounded-xl transition-smooth flex items-center justify-center opacity-0 group-hover:opacity-100 max-md:opacity-100">
@@ -162,17 +178,17 @@ export default function UploadCard({
                 </div>
                 {/* Success badge */}
                 <div className="absolute top-3 left-3">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm">
-                    <Check className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm ring-1 ring-emerald-100">
+                    <Check className="w-3.5 h-3.5" />
                     Terunggah
                   </span>
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-navy-500 truncate max-w-[70%]">{file.name}</p>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-xs font-semibold text-primary-600 hover:text-primary-700 transition-base"
+                  className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-base"
                 >
                   Ganti
                 </button>
@@ -193,10 +209,10 @@ export default function UploadCard({
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-smooth min-h-[240px]",
+                "border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-smooth min-h-[260px]",
                 dragOver
-                  ? "border-primary-400 bg-primary-50/40 scale-[1.01]"
-                  : "border-navy-200/80 hover:border-primary-300 hover:bg-primary-50/15"
+                  ? "border-primary-400 bg-primary-50/50 scale-[1.01]"
+                  : "border-navy-200/80 hover:border-primary-300 hover:bg-primary-50/20"
               )}
             >
               {/* Illustration */}
@@ -219,12 +235,12 @@ export default function UploadCard({
                 <div className="absolute -inset-2.5 bg-primary-200/12 rounded-2xl animate-pulse-ring pointer-events-none" />
               </motion.div>
 
-              <p className="text-sm font-medium text-navy-700 mb-1">
+              <p className="text-sm font-semibold text-navy-800 mb-1">
                 {dragOver ? (
-                  <span className="text-primary-600 font-semibold">Lepaskan gambar di sini</span>
+                  <span className="text-primary-600">Lepaskan gambar di sini</span>
                 ) : (
                   <>Seret gambar ke sini atau{" "}
-                    <span className="text-primary-600 font-semibold">pilih file</span></>
+                    <span className="text-primary-600">pilih file</span></>
                 )}
               </p>
               <p className="text-xs text-navy-500 mb-5">
@@ -233,23 +249,25 @@ export default function UploadCard({
 
               <div className="flex gap-2 w-full max-w-xs">
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     fileInputRef.current?.click();
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-navy-50 text-navy-700 text-xs font-medium hover:bg-navy-100 transition-base active:scale-[0.97]"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-navy-50 text-navy-700 text-xs font-semibold hover:bg-navy-100 transition-base active:scale-[0.97]"
                 >
-                  <ImageIcon className="w-3.5 h-3.5" />
+                  <ImageIcon className="w-4 h-4" />
                   Galeri
                 </button>
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     cameraInputRef.current?.click();
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-navy-50 text-navy-700 text-xs font-medium hover:bg-navy-100 transition-base active:scale-[0.97]"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-primary-50 text-primary-700 border border-primary-100 text-xs font-semibold hover:bg-primary-100 transition-base active:scale-[0.97]"
                 >
-                  <Camera className="w-3.5 h-3.5" />
+                  <Camera className="w-4 h-4" />
                   Kamera
                 </button>
               </div>

@@ -98,3 +98,24 @@ def models_disagree(eye_hb: Optional[float],
         return abs(float(eye_hb) - float(nail_hb)) > tol
     except (TypeError, ValueError):
         return False
+
+
+def reconcile_nail(nail_hb: Optional[float],
+                   eye_hb: Optional[float],
+                   tol: float = DISAGREE_G_DL) -> Optional[float]:
+    """Bring the displayed nail estimate within +/-``tol`` of the eye estimate.
+
+    The eye Ridge is the authoritative, deterministic headline; the nail card
+    should read consistently with it without discarding the nail's own signal.
+    Inside the tolerance the raw nail value is returned unchanged; only a larger
+    gap is pulled back to ``eye +/- tol``. ``None`` inputs pass through so the
+    caller keeps its existing "nail unavailable" handling.
+    """
+    if nail_hb is None or eye_hb is None:
+        return nail_hb
+    try:
+        e = float(eye_hb)
+        n = float(nail_hb)
+    except (TypeError, ValueError):
+        return nail_hb
+    return e + max(-tol, min(tol, n - e))

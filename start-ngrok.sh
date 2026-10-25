@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Menjalankan AneVision lalu mengeksposnya lewat ngrok supaya orang lain bisa
-# mencobanya lewat satu URL publik. Versi cloudflare ada di ./start.sh.
+# Versi lama: menjalankan AneVision lalu mengeksposnya lewat ngrok supaya orang
+# lain bisa mencobanya lewat satu URL publik. Gunakan ./start.sh (lokal) atau
+# ./start.sh --ngrok (lokal + tunnel) yang lebih baru.
 #
 # Hanya port frontend yang ditunnel. Vite sudah mem-proxy /api ke backend
 # (frontend/vite.config.ts), jadi backend tetap di localhost dan tidak butuh
@@ -69,7 +70,7 @@ pick_port() {
   echo "$start"
 }
 
-PORT_FRONTEND="$(pick_port "${PORT_FRONTEND:-5173}")"
+PORT_FRONTEND="$(pick_port "${PORT_FRONTEND:-5174}")"
 PORT_BACKEND="$(pick_port "${PORT_BACKEND:-8000}")"
 
 pids=()
@@ -104,25 +105,27 @@ echo ">> Menjalankan backend (uvicorn)..."
 pids+=($!)
 
 echo ">> Menjalankan frontend (vite)..."
-(cd "$FRONTEND_DIR" && VITE_PROXY_TARGET="http://localhost:$PORT_BACKEND" exec npm run dev -- --port "$PORT_FRONTEND" --strictPort) &
+# --host 127.0.0.1 wajib: tanpa itu vite hanya listen di ::1 dan tunnel
+# ngrok akan membalas 502.
+(cd "$FRONTEND_DIR" && VITE_PROXY_TARGET="http://127.0.0.1:$PORT_BACKEND" exec npm run dev -- --host 127.0.0.1 --port "$PORT_FRONTEND" --strictPort) &
 pids+=($!)
 
 echo ">> Menunggu frontend siap..."
 for _ in $(seq 1 40); do
-  if curl -s -o /dev/null "http://localhost:$PORT_FRONTEND" 2>/dev/null; then break; fi
+  if curl -s -o /dev/null "http://127.0.0.1:$PORT_FRONTEND" 2>/dev/null; then break; fi
   sleep 1
 done
 
 echo ">> Menunggu backend siap..."
 for _ in $(seq 1 60); do
-  if curl -s -o /dev/null "http://localhost:$PORT_BACKEND/health" 2>/dev/null; then break; fi
+  if curl -s -o /dev/null "http://127.0.0.1:$PORT_BACKEND/health" 2>/dev/null; then break; fi
   sleep 1
 done
 
 # ---------------------------------------------------------------- ngrok
 
 TUNNEL_LOG="$(mktemp)"
-NGROK_ARGS=(http "$PORT_FRONTEND" --log=stdout --log-level=info)
+NGROK_ARGS=(http "127.0.0.1:$PORT_FRONTEND" --log=stdout --log-level=info)
 [ -n "${NGROK_DOMAIN:-}" ] && NGROK_ARGS+=(--domain="$NGROK_DOMAIN")
 
 echo ">> Menjalankan ngrok..."

@@ -85,8 +85,32 @@ def _load_cnn():
 
 
 def _gender_info(gender):
-    gender_str = str(gender).strip().upper()
-    is_female = gender_str.startswith(("F", "P"))
+    """Map a free-form gender string to (is_female, label).
+
+    Exact labels are matched first because "Pria" (male) and "Perempuan"
+    (female) share a leading "P", and "Wanita" (female) starts with neither
+    "F" nor "P". The old prefix-only test misread "Wanita" as male and
+    "Pria" as female, flipping the Ridge output by ~1.75 g/dL for the same
+    image. Prefix matching is kept only as a fallback for unknown spellings.
+    """
+    g = str(gender).strip().lower()
+    female_tokens = {"f", "female", "p", "perempuan", "wanita", "w", "cewek"}
+    male_tokens = {"m", "male", "pria", "laki", "laki-laki", "laki_laki",
+                   "l", "cowok", "cowo"}
+
+    if g in female_tokens:
+        is_female = True
+    elif g in male_tokens:
+        is_female = False
+    elif g.startswith(("pria", "male", "laki", "cowo")):
+        is_female = False
+    elif g.startswith(("perempuan", "wanita", "female", "cewek")):
+        is_female = True
+    else:
+        # Unknown token: fall back to the contract's default (anything that is
+        # not clearly female is treated as male).
+        is_female = g.startswith(("f", "w"))
+
     return is_female, ("Wanita" if is_female else "Pria")
 
 

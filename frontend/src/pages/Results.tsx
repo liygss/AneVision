@@ -36,7 +36,19 @@ export default function Results() {
   const hasFusion = result.fusion != null;
   const eyeThreshold = result.eye.threshold_used ?? 12.0;
   const nailGuardWarning = result.nail?.flags_ok === false;
-  const disagree = result.models_disagree === true;
+
+  // The headline is eye-authoritative (deterministic for the same photo +
+  // gender); the MAE-weighted fusion is shown only as supplementary reference.
+  const eyePrimaryHb = result.eye.hgb_predicted ?? result.eye.estimated_hb ?? result.estimated_hb;
+  const hasFusionValue = hasFusion && result.fusion?.estimated_hb != null;
+  const combinedHb = hasFusionValue ? result.fusion!.estimated_hb! : result.estimated_hb;
+  const combinedConfidence = hasFusionValue
+    ? result.fusion!.confidence ?? result.confidence
+    : result.confidence;
+  const genderLabel = result.eye.gender ?? null;
+  const cardCount = hasNail ? 3 : hasNailError ? 2 : 1;
+  const cardsGridClass =
+    cardCount >= 3 ? "grid-cols-1 md:grid-cols-3" : cardCount === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
 
   const getRiskConfig = (level: string) => {
     switch (level) {
@@ -111,7 +123,7 @@ export default function Results() {
           </h1>
           <p className="text-navy-500 text-sm md:text-base">
             Estimasi skrining anemia berbasis AI dari analisis citra mata
-            {hasNail ? " dan kuku" : ""}.
+            {hasNail ? ", dengan analisis kuku sebagai referensi tambahan" : ""}.
           </p>
         </motion.div>
 
@@ -169,9 +181,27 @@ export default function Results() {
 
                 {/* Right: details */}
                 <div className="flex-1 w-full min-w-0 text-center md:text-left">
-                  <p className="text-[11px] font-bold text-navy-600 uppercase tracking-[0.14em] mb-1">
-                    Estimasi Hemoglobin AI
-                  </p>
+                  <div className="mb-1 flex items-center justify-center md:justify-start gap-2 flex-wrap">
+                    <p className="text-[11px] font-bold text-navy-600 uppercase tracking-[0.14em]">
+                      Estimasi Hemoglobin AI (Model Mata)
+                    </p>
+                    {result.eye.status && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          result.eye.status === "Anemia"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}
+                      >
+                        {result.eye.status}
+                      </span>
+                    )}
+                    {genderLabel && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
+                        {genderLabel} · ambang {eyeThreshold.toFixed(1)} g/dL
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-navy-600 mb-5 max-w-md mx-auto md:mx-0 leading-relaxed">
                     {risk.message}
                   </p>
@@ -206,7 +236,7 @@ export default function Results() {
           <ConfidenceChart
             eyeConfidence={result.eye.confidence || result.confidence}
             nailConfidence={hasNail ? result.nail!.confidence : null}
-            combinedConfidence={result.confidence}
+            combinedConfidence={result.fusion?.confidence ?? result.confidence}
           />
         </motion.div>
 
@@ -215,23 +245,25 @@ export default function Results() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.24 }}
-          className={`grid gap-6 mb-8 ${hasNail ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}
+          className={`grid gap-6 mb-8 ${cardsGridClass}`}
         >
           <ResultCard
-            title="Analisis Mata"
-            estimatedHb={result.eye.hgb_predicted || result.eye.estimated_hb || result.estimated_hb}
+            title="Analisis Mata (Utama)"
+            estimatedHb={eyePrimaryHb}
             confidence={result.eye.confidence || result.confidence}
             icon={<Eye className="w-5 h-5 text-primary-600" />}
-            threshold={eyeThreshold}
-          />
-          <ResultCard
-            title={hasFusion ? "Estimasi Akhir (Gabungan)" : "Estimasi Skrining Akhir"}
-            estimatedHb={result.estimated_hb}
-            confidence={result.confidence}
-            icon={<Microscope className="w-5 h-5 text-primary-600" />}
             variant="highlighted"
             threshold={eyeThreshold}
           />
+          {hasFusion && (
+            <ResultCard
+              title="Estimasi Gabungan (Referensi)"
+              estimatedHb={combinedHb}
+              confidence={combinedConfidence}
+              icon={<Microscope className="w-5 h-5 text-primary-600" />}
+              threshold={eyeThreshold}
+            />
+          )}
           {hasNail && (
             <div>
               <ResultCard
@@ -261,27 +293,6 @@ export default function Results() {
             </div>
           )}
         </motion.div>
-
-        {/* Models disagree warning */}
-        {disagree && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.28 }}
-            className="mb-8"
-          >
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-bold text-amber-800">Estimasi mata dan kuku tidak sepakat</p>
-                <p className="text-xs text-amber-700 mt-1">
-                  Selisih antara estimasi mata dan kuku cukup besar.
-                  Kami menyarankan untuk mengulangi skrining atau mengonfirmasi hasil ini dengan uji hemoglobin darah.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         {/* Nail guard warning */}
         {hasNail && nailGuardWarning && (
@@ -317,7 +328,10 @@ export default function Results() {
               <span className="px-3 py-1.5 bg-pink-50 border border-pink-200/60 rounded-lg font-medium">Wanita: 12.0 – 15.5 g/dL</span>
               <span className="px-3 py-1.5 bg-purple-50 border border-purple-200/60 rounded-lg font-medium">Ibu Hamil: ≥ 11.0 g/dL</span>
             </div>
-            <p className="text-[11px] text-navy-500 mt-2">Threshold anemia yang digunakan: {eyeThreshold.toFixed(1)} g/dL</p>
+            <p className="text-[11px] text-navy-500 mt-2">
+              {genderLabel ? `Jenis kelamin: ${genderLabel} · ` : ""}
+              Threshold anemia yang digunakan: {eyeThreshold.toFixed(1)} g/dL
+            </p>
           </div>
         </motion.div>
 
@@ -441,7 +455,9 @@ export default function Results() {
                   }`}>
                     {result.nail!.status}
                   </p>
-                  <p className="text-xs text-navy-500 mt-1">Hgb: {result.nail!.estimated_hb?.toFixed(1)} g/dL (raw + koreksi {(result.nail!.bias_correction ?? 0).toFixed(1)} g/dL)</p>
+                  <p className="text-xs text-navy-500 mt-1">
+                    Hgb: {result.nail!.estimated_hb?.toFixed(1)} g/dL (raw + koreksi {(result.nail!.bias_correction ?? 0).toFixed(1)} g/dL)
+                  </p>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">Threshold: ≥ {result.nail!.threshold_used}</span>
                     <span className="text-[10px] bg-navy-100 text-navy-500 px-2 py-0.5 rounded-full">MAE: ±{result.nail!.mae} g/dL</span>

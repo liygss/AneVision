@@ -6,6 +6,7 @@ import {
   Upload,
   Eye,
   Activity,
+  Check,
   BarChart3,
   Smartphone,
   ScanSearch,
@@ -24,6 +25,9 @@ import HbGauge from "@/components/HbGauge";
 import ConfidenceChart from "@/components/ConfidenceChart";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import SectionHeader from "@/components/SectionHeader";
+import UsageGuide from "@/components/UsageGuide";
+import AttentionShowcase from "@/components/AttentionShowcase";
+import ModelMetrics from "@/components/ModelMetrics";
 import { buttonStyles } from "@/lib/utils";
 
 const steps = [
@@ -116,21 +120,38 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary-50/50 via-white to-white">
-        <div className="absolute inset-0 grid-fade pointer-events-none" />
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary-50/70 via-cyan-50/30 to-white">
+        {/* Base grid texture */}
+        <div className="absolute inset-0 grid-fade pointer-events-none" aria-hidden="true" />
+
+        {/* Top spotlight */}
         <div
-          className="absolute top-0 left-1/2 w-[900px] h-[640px] -translate-x-1/2 -translate-y-1/3 pointer-events-none"
+          className="absolute top-0 left-1/2 w-[1100px] h-[720px] -translate-x-1/2 -translate-y-1/3 pointer-events-none"
+          aria-hidden="true"
           style={{
             background:
-              "radial-gradient(ellipse at center, rgba(8,145,178,0.10) 0%, rgba(8,145,178,0.04) 38%, transparent 68%)",
+              "radial-gradient(ellipse at center, rgba(6,182,212,0.16) 0%, rgba(99,102,241,0.07) 40%, transparent 70%)",
           }}
         />
-        {/* Aurora blobs */}
-        <div className="pointer-events-none absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-primary-400/15 blur-3xl animate-aurora" />
-        <div className="pointer-events-none absolute top-10 right-[-120px] w-[460px] h-[460px] rounded-full bg-cyan-300/20 blur-3xl animate-aurora-2" />
-        <div className="pointer-events-none absolute bottom-[-140px] left-1/3 w-[380px] h-[380px] rounded-full bg-primary-200/20 blur-3xl animate-aurora" style={{ animationDelay: "3s" }} />
+
+        {/* Aurora / mesh blobs */}
+        <div className="pointer-events-none absolute -top-32 -left-28 w-[480px] h-[480px] rounded-full bg-primary-400/25 blur-3xl animate-aurora" aria-hidden="true" />
+        <div className="pointer-events-none absolute top-4 right-[-140px] w-[520px] h-[520px] rounded-full bg-cyan-300/30 blur-3xl animate-aurora-2" aria-hidden="true" />
+        <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[620px] h-[320px] rounded-full bg-indigo-400/15 blur-3xl animate-aurora" style={{ animationDelay: "3s" }} aria-hidden="true" />
+        <div className="pointer-events-none absolute bottom-[-160px] left-1/4 w-[420px] h-[420px] rounded-full bg-primary-200/30 blur-3xl animate-aurora-2" style={{ animationDelay: "1.5s" }} aria-hidden="true" />
+
+        {/* Slow conic beam */}
+        <div
+          className="pointer-events-none absolute top-1/2 left-1/2 w-[1400px] h-[1400px] -translate-x-1/2 -translate-y-1/2 opacity-[0.06] animate-spin-slow"
+          aria-hidden="true"
+          style={{
+            background:
+              "conic-gradient(from 90deg at 50% 50%, transparent 0deg, rgba(6,182,212,0.9) 40deg, transparent 80deg, transparent 220deg, rgba(99,102,241,0.8) 260deg, transparent 300deg)",
+          }}
+        />
+
         {/* Drifting particles */}
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
           <span className="absolute left-[12%] top-[30%] w-1 h-1 rounded-full bg-primary-400/60 animate-particle-drift" />
           <span className="absolute left-[22%] top-[62%] w-1.5 h-1.5 rounded-full bg-cyan-400/50 animate-particle-drift" style={{ animationDelay: "1.6s" }} />
           <span className="absolute left-[78%] top-[24%] w-1 h-1 rounded-full bg-primary-300/60 animate-particle-drift" style={{ animationDelay: "2.4s" }} />
@@ -138,6 +159,13 @@ export default function Home() {
           <span className="absolute left-[64%] top-[78%] w-1 h-1 rounded-full bg-primary-400/50 animate-particle-drift" style={{ animationDelay: "0.8s" }} />
           <span className="absolute left-[40%] top-[18%] w-1 h-1 rounded-full bg-cyan-300/50 animate-particle-drift" style={{ animationDelay: "4.2s" }} />
         </div>
+
+        {/* Bottom vignette */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
+          aria-hidden="true"
+          style={{ background: "linear-gradient(to top, rgba(255,255,255,0.9), transparent)" }}
+        />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 lg:gap-12 items-center">
@@ -150,7 +178,7 @@ export default function Home() {
             >
               <motion.div
                 variants={fadeUp}
-                className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm text-primary-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-primary-100 shadow-sm shadow-primary-900/5 mb-7"
+                className="inline-flex items-center gap-2 bg-white/85 backdrop-blur-md text-primary-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border border-primary-200/80 shadow-[0_10px_30px_-12px_rgba(8,145,178,0.5)] mb-7"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-60" />
@@ -160,13 +188,17 @@ export default function Home() {
                 Skrining Non-Invasif Berbasis AI
               </motion.div>
 
-              <h1 className="text-[2.75rem] sm:text-6xl lg:text-[4rem] font-extrabold text-navy-900 tracking-[-0.03em] leading-[1.02] text-balance mb-7">
+              <h1 className="text-[3rem] sm:text-6xl lg:text-[4.6rem] font-extrabold text-navy-900 tracking-[-0.035em] leading-[1.03] text-balance mb-7">
                 <span className="block">
                   {headlineWords.map((word, i) => (
                     <span key={word.text}>
                       <span className="inline-block overflow-hidden pb-1 align-bottom">
                         <motion.span
-                          className={word.accent ? "inline-block text-gradient" : "inline-block"}
+                          className={
+                            word.accent
+                              ? "inline-block text-gradient-strong drop-shadow-[0_4px_22px_rgba(6,182,212,0.4)]"
+                              : "inline-block"
+                          }
                           initial={reduceMotion ? false : { y: "110%" }}
                           animate={{ y: 0 }}
                           transition={{
@@ -184,7 +216,7 @@ export default function Home() {
                 </span>
                 <span className="block overflow-hidden pb-1">
                   <motion.span
-                    className="relative inline-block text-gradient-strong"
+                    className="relative inline-block text-gradient-strong drop-shadow-[0_4px_22px_rgba(6,182,212,0.35)]"
                     initial={reduceMotion ? false : { y: "110%" }}
                     animate={{ y: 0 }}
                     transition={{ duration: 0.7, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
@@ -231,7 +263,7 @@ export default function Home() {
 
               <motion.div
                 variants={fadeUp}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-6"
+                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 mb-5"
               >
                 <Link to="/screening" className={buttonStyles("primary", "lg")}>
                   Mulai Skrining
@@ -240,6 +272,18 @@ export default function Home() {
                 <a href="#cara-kerja" className={buttonStyles("secondary", "lg")}>
                   Cara Kerja
                 </a>
+              </motion.div>
+
+              <motion.div
+                variants={fadeUp}
+                className="flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 mb-7"
+              >
+                {["Gratis", "Tanpa instalasi", "Hasil dalam ±10 detik"].map((item) => (
+                  <span key={item} className="inline-flex items-center gap-1.5 text-xs font-semibold text-navy-600">
+                    <Check className="w-3.5 h-3.5 text-primary-600" />
+                    {item}
+                  </span>
+                ))}
               </motion.div>
 
               <motion.div variants={fadeUp} className="mb-8">
@@ -280,6 +324,25 @@ export default function Home() {
             </motion.div>
           </div>
         </div>
+
+        {/* Scroll indicator */}
+        <motion.a
+          href="#cara-kerja"
+          aria-label="Gulir ke bawah untuk cara kerja"
+          initial={{ opacity: 0, y: -8, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          transition={{ duration: 0.6, delay: 1.1 }}
+          className="hidden lg:flex absolute bottom-16 left-1/2 flex-col items-center gap-1.5 text-navy-500 hover:text-primary-600 transition-base"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Gulir</span>
+          <span className="flex h-9 w-[22px] items-start justify-center rounded-full border border-navy-300/70 p-1">
+            <motion.span
+              className="h-1.5 w-1.5 rounded-full bg-primary-500"
+              animate={reduceMotion ? undefined : { y: [0, 10, 0] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </span>
+        </motion.a>
 
         {/* Curved bottom wave */}
         <svg
@@ -333,6 +396,12 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="hairline" />
       </div>
+
+      {/* ============ TATA CARA PENGGUNAAN ============ */}
+      <UsageGuide />
+
+      {/* ============ ILUSTRASI HASIL: PETA PERHATIAN & DETEKSI YOLO ============ */}
+      <AttentionShowcase />
 
       {/* ============ PRATINJAU HASIL ============ */}
       <section className="py-20 md:py-28 bg-white">
@@ -435,6 +504,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ============ MATRIKS PERFORMA MODEL ============ */}
+      <ModelMetrics />
 
       {/* ============ FITUR BENTO ============ */}
       <section className="py-20 md:py-28 bg-white">
