@@ -112,6 +112,7 @@ def _load():
 
     # Load AINailSys ONNX models
     ainailsys_dir = _NAIL_DIR.parent / "AINailSys" / "models" / "deployment"
+    _AINAILSYS_DIR = ainailsys_dir
     s1_path = ainailsys_dir / "stage1_binary.onnx"
     s2_path = ainailsys_dir / "stage2_multiclass.onnx"
     print(f"[nail_worker] AINailSys check: dir={ainailsys_dir} exists={ainailsys_dir.exists()} s1={s1_path.exists()} s2={s2_path.exists()}", flush=True)
@@ -562,7 +563,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
         "nail_condition_detail": ainailsys_stage2,
         "nail_condition_confidence": round(ainailsys_confidence, 4),
         "heatmap": _draw_box_overlay(img_rgb, items, middle),
-        "_debug_ainailsys": {"s1": _ainailsys_s1 is not None, "s2": _ainailsys_s2 is not None, "dir": str(ainailsys_dir) if 'ainailsys_dir' in dir() else None},
+        "_debug_ainailsys": {"s1": _ainailsys_s1 is not None, "s2": _ainailsys_s2 is not None, "dir": str(globals().get('_AINAILSYS_DIR', locals().get('ainailsys_dir','?')))},
     }
 
 
