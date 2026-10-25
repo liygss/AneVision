@@ -498,6 +498,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
     ainailsys_confidence = 0.0
     AINAILSYS_ADJUSTMENT = 0.61  # |coefficient| from retraining
     AINAILSYS_CONF_MIN = 0.70
+    print(f"[nail_worker] AINailSys in predict: s1={_ainailsys_s1 is not None} s2={_ainailsys_s2 is not None}", flush=True)
 
     if _ainailsys_s1 is not None:
         try:
@@ -554,6 +555,7 @@ def _predict(image_bytes: bytes, gender: str, nail_box=None):
         "nail_condition_detail": ainailsys_stage2,
         "nail_condition_confidence": round(ainailsys_confidence, 4),
         "heatmap": _draw_box_overlay(img_rgb, items, middle),
+        "_debug_ainailsys": {"s1": _ainailsys_s1 is not None, "s2": _ainailsys_s2 is not None, "dir": str(ainailsys_dir) if 'ainailsys_dir' in dir() else None},
     }
 
 
